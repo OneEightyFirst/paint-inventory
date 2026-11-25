@@ -282,7 +282,7 @@ function renderBase(){
 }
 function renderWheel(){
  const W=wheel();
- if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty">Add at least two paints.</div></div>`;return}
+ if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty"><p style="margin:0 0 14px">Add at least two paints, or start from a scheme.</p><button class="btn pri" data-opennew="1">+ New palette</button></div></div>`;return}
  const n=W.rings.length,cx=340,cy=330,R=[150,250],half=Math.PI/n,ov=.006;
  let g="",labels="",mark="",over=[];
  /* outer ring as full slices to the centre, the tinted ring layered over the middle */
@@ -409,7 +409,7 @@ document.addEventListener("click",e=>{
  if(t.dataset.addbase){if(!S.base.includes(t.dataset.addbase)){S.base.push(t.dataset.addbase);S.scheme="auto"}persistDraft();render();return}
  if(t.dataset.r){choose(t);return}
  if(t.id==="addBtn"){renderPicker();$("picker").showModal();return}
- if(t.id==="newBtn"){renderNew();$("newDlg").showModal();return}
+ if(t.id==="newBtn"||t.dataset.opennew){renderNew();$("newDlg").showModal();$("nCreate").focus();return}
  if(t.dataset.sch){N.scheme=t.dataset.sch;renderNew();return}
  if(t.dataset.start){N.paint=t.dataset.start;renderNew();return}
  if(t.dataset.swap){const id=t.dataset.swap,a=byId[id].alt;S.base=S.base.map(x=>x===id?a:x);S.pins=S.pins.map(r=>r.map(([i,w])=>[i===id?a:i,w]));S.scheme="auto";sel=null;persistDraft();render();return}
@@ -443,7 +443,9 @@ $("shareBtn").onclick=async()=>{const url=location.href.split("#")[0]+"#p="+enco
 /* ---------- boot ---------- */
 (function(){const m=location.hash.match(/#p=(.+)/);let s=m&&decode(m[1]);
  if(!s){try{const d=localStorage.getItem("paletteDraft");s=d&&decode(d)}catch(e){}}
- if(s&&s.base.length)S=s;else{N.scheme="zorn";const plan=planNew();S={name:"Zorn",base:plan.map(x=>x.p.id),pins:[],scheme:"auto"};N.scheme="comp"}
- render()})();
+ /* a shared link opens straight to its palette; otherwise start at New palette, with the last draft behind it */
+ if(s&&s.base.length)S=s;
+ render();
+ if(!m){renderNew();$("newDlg").showModal();$("nCreate").focus()}})();
 </script>
 </body></html>
