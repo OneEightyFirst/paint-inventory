@@ -48,7 +48,7 @@ input[type=search],input[type=text]{font:16px Archivo,sans-serif;min-height:42px
 .sheet{background:var(--paper) radial-gradient(120% 90% at 50% 40%,#fbfaf6,#ebe8df);color:#3a3833;border-radius:6px;padding:clamp(12px,3vw,28px);box-shadow:0 1px 0 #fff8 inset,0 14px 34px #0004}
 .sheet h3{text-align:center;font:600 clamp(22px,3vw,30px) Archivo,sans-serif;color:#4a4740}
 svg.wheel{display:block;width:100%;max-width:620px;margin:0 auto;overflow:visible}
-svg.wheel [data-r]{cursor:pointer;stroke:var(--paper);stroke-width:1.5}
+svg.wheel [data-r]{cursor:pointer}
 svg.vals rect{rx:3px}
 svg.wheel text{font:500 13px Archivo,sans-serif;fill:#6d6a63}
 svg.vals{display:block;width:100%;max-width:520px;margin:6px auto 0;overflow:visible}
@@ -246,6 +246,9 @@ function family(h){const [L,C,H]=lch(h);if(C<8)return L>80?"White":L<25?"Black":
  return [[20,"Red"],[45,"Red / Orange"],[65,"Orange"],[85,"Yellow / Orange"],[105,"Yellow"],[135,"Yellow / Green"],[175,"Green"],[215,"Blue / Green"],[260,"Blue"],[300,"Blue / Violet"],[330,"Violet"],[350,"Red / Violet"],[361,"Red"]].find(([a])=>H<a)[1]}
 function nameFor(h){const L=lch(h)[0],f=family(h);return ["White","Black","Grey"].includes(f)?(f==="Grey"?"Neutral grey":"Near "+f.toLowerCase()):(L<35?"Dark ":L>75?"Light ":"")+f.toLowerCase().replace(/^./,c=>c.toUpperCase())}
 
+/* ---------- skin reference: fixed light-to-deep skin tones, matched to bottles you own ---------- */
+const SKIN_T=["#E8C0A2","#CF9A78","#A87253","#734B36","#43302A"];
+const SKIN=(()=>{const used=new Set();return SKIN_T.map(h=>{const m=OPAQUE.filter(p=>!used.has(p.id)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0];used.add(m.p.id);return m.p})})();
 /* ---------- wheel model ---------- */
 const RAT=[.25,1/3,.5,1,1.5,2,3,4,6,8];
 function wheel(){
@@ -262,22 +265,7 @@ function wheel(){
   let b=null;for(const q of rat){const rr=r.concat([[white.id,tot*q]]),d=Math.abs(lch(recHex(rr))[0]-goal);if(!b||d<b.d)b={rr,d}}return b.rr};
  /* two rings like the Zorn chart: full strength outside, white-tinted inside */
  const rings=w.map(x=>[x.r,tintTo(x.r,.45)]);
- /* skin tones: the palette's red + yellow + darkest, in whatever small ratio lands nearest a mid flesh hue,
-    then stepped light (white) to dark (more of the darkest) */
- const hueD=(p,H)=>{const h=lch(p.h)[2];return Math.min(Math.abs(h-H),360-Math.abs(h-H))};
- const red=[...src].sort((a,b)=>hueD(a,32)-hueD(b,32))[0],yel=[...src].filter(p=>p!==red).sort((a,b)=>hueD(a,85)-hueD(b,85))[0];
- const dark=[...src].filter(p=>p!==red&&p!==yel).sort((a,b)=>lch(a.h)[0]-lch(b.h)[0])[0];
- let skin=null;
- if(red&&yel){let best=1e9;for(const a of [1,2,3])for(const b of [1,2,3])for(const c of (dark?[0,.25,.5]:[0])){const r=[[red.id,a],[yel.id,b]].concat(c?[[dark.id,c]]:[]),h=recHex(r);
-  const [L,C,H]=lch(h),score=Math.min(Math.abs(H-58),360-Math.abs(H-58))+Math.abs(C-30)*.6+Math.abs(L-55)*.3;if(score<best){best=score;skin=r}}}
- let values=null;
- if(skin){const tot=skin.reduce((s,[,x])=>s+x,0),L3=lch(recHex(skin))[0];
-  /* deeper shadows: more red and a little of the darkest, so they stay warm brown instead of going grey */
-  const add=(r,id,q)=>{const o=r.find(([i])=>i===id);return o?r.map(([i,w])=>[i,i===id?w+q:w]):r.concat([[id,q]])};
-  const deeper=goal=>{if(!dark)return null;let b=null;for(const q of [.25,.5,1,1.5,2,3])for(const d of [.25,.5,1,1.5,2]){const r=add(add(skin,red.id,tot*q/4),dark.id,tot*d/4),[L,C,H]=lch(recHex(r));
-    const sc=Math.abs(L-goal)+Math.max(0,Math.min(Math.abs(H-50),360-Math.abs(H-50))-25)*.4+Math.max(0,12-C)*.8;if(!b||sc<b.sc)b={r,sc}}return b.r};
-  values=[white?tintTo(skin,.6):null,white?tintTo(skin,.3):null,skin,deeper(L3-13),deeper(L3-26)].filter(Boolean)}
- return {rings,white,values};
+ return {rings,white};
 }
 const pt=(cx,cy,r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)];
 function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1);return `M${cx} ${cy}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z`}
@@ -291,7 +279,7 @@ function renderBase(){
 function renderWheel(){
  const W=wheel();
  if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty">Add at least two paints.</div></div>`;return}
- const n=W.rings.length,cx=340,cy=330,R=[150,250],half=Math.PI/n,ov=0;
+ const n=W.rings.length,cx=340,cy=330,R=[150,250],half=Math.PI/n,ov=.006;
  let g="",labels="",mark="",over=[];
  /* outer ring as full slices to the centre, the tinted ring layered over the middle */
  [[1,R[1],"br0"],[0,R[0],"br1"]].forEach(([k,r,f])=>{
@@ -301,7 +289,7 @@ function renderWheel(){
    const miss=rec.some(([id])=>byId[id]&&byId[id].missing);
    g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})"><path d="${slice(cx,cy,rr,-half-ov,half+ov)}" fill="${h}" filter="url(#${f})" data-r='${esc(JSON.stringify(rec))}' tabindex="0" aria-label="${esc(nameFor(h))}${miss?", uses a paint you don't own":""}"><title>${esc(nameFor(h))}${miss?" (uses a paint you don't own)":""}</title></path></g>`;
    if(miss)over.push({deg,rr,k});
-   if(sel&&sel.key===recKey(rec)){const rm=k===1?(W.white?(R[0]+R[1])/2:R[1]*.7):R[0]*.62,[mx,my]=pt(cx,cy,rm,i/n*2*Math.PI);mark=`<circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#fff" stroke-width="3"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#111" stroke-width="1.2"/>`}
+   if(sel&&sel.key&&sel.key===recKey(rec)){const rm=k===1?(W.white?(R[0]+R[1])/2:R[1]*.7):R[0]*.62,[mx,my]=pt(cx,cy,rm,i/n*2*Math.PI);mark=`<circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#fff" stroke-width="3"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#111" stroke-width="1.2"/>`}
   })});
  const inner={1:W.white?R[0]:0,0:0};
  over.forEach(({deg,rr,k})=>{const r0=Math.max(inner[k]+5,24),r1=rr-5,a0=-half+.03,a1=half-.03,[x1,y1]=pt(cx,cy,r1,a0),[x2,y2]=pt(cx,cy,r1,a1),[x3,y3]=pt(cx,cy,r0,a1),[x4,y4]=pt(cx,cy,r0,a0);
@@ -311,15 +299,17 @@ function renderWheel(){
   const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[1]+26,a),anc=Math.abs(Math.sin(a))<.25?"middle":Math.sin(a)>0?"start":"end";
   labels+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${anc}">${esc(f)}</text>`});
  let vals="";
- if(W.values){const m=W.values.length,bw=92,gap=10,x0=(520-m*bw-(m-1)*gap)/2;
-  vals=`<svg class="vals" viewBox="0 0 520 140" role="group" aria-label="Skin tone value scale">`+W.values.map((r,i)=>{const x=x0+i*(bw+gap),h=recHex(r);
-   return `<rect x="${x}" y="6" width="${bw}" height="78" fill="${h}" filter="url(#brv)" data-r='${esc(JSON.stringify(r))}' tabindex="0" aria-label="Skin tone ${i+1}"></rect>${sel&&sel.key===recKey(r)?`<circle cx="${x+bw/2}" cy="45" r="9" fill="none" stroke="#fff" stroke-width="3"/>`:""}<text x="${x+bw/2}" y="108" text-anchor="middle">${i+1}</text>`}).join("")+`<text x="260" y="134" text-anchor="middle">Skin tone value scale</text></svg>`}
+ {const bw=92,gap=10,x0=(520-5*bw-4*gap)/2;
+  vals=`<svg class="vals" viewBox="0 0 520 150" role="group" aria-label="Skin tone reference">`+SKIN.map((p,i)=>{const x=x0+i*(bw+gap);
+   return `<rect x="${x}" y="6" width="${bw}" height="78" fill="${p.h}" filter="url(#brv)" data-paint="${esc(p.id)}" tabindex="0" style="cursor:pointer" aria-label="Skin tone ${i+1}: ${esc(p.n)}"><title>${esc(p.n)}</title></rect>${sel&&sel.paint===p.id?`<circle cx="${x+bw/2}" cy="45" r="9" fill="none" stroke="#fff" stroke-width="3"/>`:""}<text x="${x+bw/2}" y="104" text-anchor="middle">${i+1}</text><text x="${x+bw/2}" y="121" text-anchor="middle" style="font-size:11px;fill:#77746d">${esc(p.n)}</text>`}).join("")+`<text x="260" y="146" text-anchor="middle">Skin tones from your rack</text></svg>`}
  const anyMiss=S.base.some(id=>byId[id]&&byId[id].missing);
  $("view").innerHTML=`<div class="sheet"><h3>${esc(S.name||"Untitled palette")}</h3>${anyMiss?`<p style="text-align:center;font-size:13px;color:#77746d;margin:2px 0 0">Dashed wedges use a colour you don't own</p>`:""}<svg class="wheel" viewBox="0 0 680 660" role="group" aria-label="Mixing wheel">${g}${mark}${labels}</svg>${vals}</div>`;
 }
 function renderDetail(){
  const d=$("detail");
  if(!sel){d.innerHTML=`<p class="muted" style="margin:0">Tap a mix for its recipe.</p>`;return}
+ if(sel.paint){const p=byId[sel.paint],inB=S.base.includes(p.id);
+  d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}</h2><div class="muted">${esc(p.b)} · ${esc(p.l)}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><button class="btn ${inB?"":"pri"}" data-addbase="${esc(p.id)}" ${inB?"disabled":""}>${inB?"In this palette":"Add to palette"}</button>`;return}
  const r=sel.r,h=recHex(r),pp=parts(r.map(x=>x[1])),pinned=S.pins.some(x=>recKey(x)===sel.key),near=nearest(h);
  d.innerHTML=`<div class="big" style="background:${h}"></div><h2>${esc(nameFor(h))}</h2><div class="muted">${h}</div>
   <div class="lbl">Recipe</div><ul class="recipe">${r.map(([id],i)=>{const p=byId[id];return `<li><b>${pp[i]} part${pp[i]>1?"s":""}</b><span class="dot" style="background:${p.h}"></span>${esc(p.n)}${p.missing?`<span class="tag">not owned</span>`:""}</li>`}).join("")}</ul>
@@ -408,7 +398,9 @@ function persistDraft(){try{localStorage.setItem("paletteDraft",encode())}catch(
 /* ---------- events ---------- */
 function choose(t){const r=JSON.parse(t.dataset.r);sel={r,key:recKey(r)};renderWheel();renderDetail();renderPins()}
 document.addEventListener("click",e=>{
- const t=e.target.closest("button,[data-r]");if(!t)return;
+ const t=e.target.closest("button,[data-r],[data-paint]");if(!t)return;
+ if(t.dataset.paint){sel={paint:t.dataset.paint};renderWheel();renderDetail();renderPins();return}
+ if(t.dataset.addbase){if(!S.base.includes(t.dataset.addbase)){S.base.push(t.dataset.addbase);S.scheme="auto"}persistDraft();render();return}
  if(t.dataset.r){choose(t);return}
  if(t.id==="addBtn"){renderPicker();$("picker").showModal();return}
  if(t.id==="newBtn"){renderNew();$("newDlg").showModal();return}
@@ -424,7 +416,7 @@ document.addEventListener("click",e=>{
  if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={scheme:s.scheme||"auto",name:s.name,base:s.base.map(reg).filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[reg(id)]))};sel=null;view="wheel";persistDraft();render();return}
  if(t.dataset.del!==undefined){const L=store.get(),s=L[+t.dataset.del];if(!confirm(`Delete "${s.name||"Untitled"}"?`))return;L.splice(+t.dataset.del,1);store.set(L);render();return}
 });
-document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&e.target.dataset.r){e.preventDefault();choose(e.target)}});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&(e.target.dataset.r||e.target.dataset.paint)){e.preventDefault();e.target.dispatchEvent(new MouseEvent("click",{bubbles:true}))}});
 $("pClose").onclick=()=>$("picker").close();
 $("picker").addEventListener("close",()=>{sel=null;render()});
 $("pq").oninput=renderPicker;
