@@ -38,6 +38,9 @@ input[type=search],input[type=text]{font:16px Archivo,sans-serif;min-height:42px
 .blk .bt b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blk .bt span{opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blk .bb{display:flex;align-items:center;gap:6px}
+.rolesel{font:600 12px Archivo,sans-serif;color:inherit;background:#0000;border:0;padding:0 14px 0 0;margin:1px 0;appearance:none;-webkit-appearance:none;cursor:pointer;max-width:100%;background-image:linear-gradient(45deg,#0000 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,#0000 50%);background-size:4px 4px;background-position:calc(100% - 6px) 55%,calc(100% - 2px) 55%;background-repeat:no-repeat;text-decoration:underline dotted;text-underline-offset:3px}
+.rolesel option{color:#1b1b1c}
+.blk.narrow .rolesel{display:none}
 .blk .pct{font:700 13px "Archivo Narrow",sans-serif;opacity:.85;margin-right:auto}
 .blk .x{border:0;background:#0000;color:inherit;width:26px;height:26px;border-radius:50%;font-size:17px;line-height:1;opacity:.75}
 .blk .x:hover{opacity:1;background:#0002}
@@ -327,12 +330,14 @@ function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1
 /* palette strip: one full-width bar, each colour's width is how much of the model it covers.
    Drag the handle between two colours to trade space between them. */
 const ROLE_W={"Base":30,"Secondary":20,"Accent":12,"Skin":10,"Metal":6,"Spot colour":3,"Shade wash":5,"Base shade":8,"Base highlight":5,"Secondary shade":5,"Leather / wood":6,"Secondary highlight":4,"White (tints)":3};
+const ROLE_LIST=["Base","Secondary","Accent","Skin","Metal","Spot colour","Shade wash","Base shade","Base highlight","Secondary shade","Secondary highlight","Leather / wood","Cloth","Hair / fur","Gems / lenses","Basing","White (tints)"];
+const roleSel=(id,cls)=>{const r=(S.roles||{})[id]||"";return `<select class="${cls}" data-role="${esc(id)}" aria-label="Role">${[""].concat(ROLE_LIST,r&&!ROLE_LIST.includes(r)?[r]:[]).map(x=>`<option value="${esc(x)}"${x===r?" selected":""}>${x?esc(x):"No role"}</option>`).join("")}</select>`};
 const wOf=id=>{S.w=S.w||{};if(!(S.w[id]>0))S.w[id]=ROLE_W[(S.roles||{})[id]]||8;return S.w[id]};
 function renderBase(){
  const ids=S.base.filter(id=>byId[id]),tot=ids.reduce((s,id)=>s+wOf(id),0)||1;
  const cells=ids.map((id,i)=>{const p=byId[id],w=wOf(id),pct=w/tot*100,role=(S.roles||{})[id],dark=lch(p.h)[0]<58,a=p.missing&&byId[p.alt];
   return `<div class="blk${p.missing?" miss":""}" style="flex:${w} 1 0;background:${p.h};color:${dark?"#f4f2ec":"#1b1b1c"}" title="${esc(p.n)}${role?" · "+esc(role):""} · ${Math.round(pct)}%">
-   <div class="bt"><b>${esc(p.n)}</b>${role?`<span>${esc(role)}</span>`:""}<span>${p.missing?"Not owned · "+p.h:esc(p.s)}</span></div>
+   <div class="bt"><b>${esc(p.n)}</b>${roleSel(id,"rolesel")}<span>${p.missing?"Not owned · "+p.h:esc(p.s)}</span></div>
    <div class="bb"><span class="pct">${Math.round(pct)}%</span>${a?`<button class="swap" data-swap="${esc(id)}" title="Use ${esc(a.n)} instead (ΔE ${p.altD.toFixed(1)})">Use ${esc(a.n)}</button>`:""}<button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></div>
   </div>${i<ids.length-1?`<div class="hdl" data-hdl="${i}" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize ${esc(p.n)} and ${esc(byId[ids[i+1]].n)}"></div>`:""}`}).join("");
  $("baseStrip").innerHTML=(ids.length?`<div class="bar" id="bar">${cells}</div>`:"")+`<div class="barfoot"><button class="add" id="addBtn">+ Add paint</button>${ids.length>1?`<span class="muted">Drag between colours to set how much of the model each covers</span><button class="link" id="evenBtn">Reset sizes</button>`:""}</div>`;
@@ -380,7 +385,7 @@ function renderDetail(){
  if(sel.paint){const p=byId[sel.paint],inB=S.base.includes(p.id);
   d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}</h2><div class="muted">${esc(p.b)} · ${esc(p.l)}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><button class="btn ${inB?"":"pri"}" data-addbase="${esc(p.id)}" ${inB?"disabled":""}>${inB?"In this palette":"Add to palette"}</button>`;return}
  if(sel.r&&sel.r.length===1){const p=byId[sel.r[0][0]],pinned=S.pins.some(x=>recKey(x)===sel.key),inB=S.base.includes(p.id);
-  d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}${p.missing?' <span class="tag">not owned</span>':""}</h2>${(S.roles||{})[p.id]?`<div class="lbl" style="margin:2px 0 4px">${esc(S.roles[p.id])}</div>`:""}<div class="muted">${esc(p.b)}${p.l?" · "+esc(p.l):""}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><div class="row"><button class="btn ${pinned?"":"pri"}" id="pinBtn">${pinned?"Unpin":"Pin"}</button>${inB?"":`<button class="btn" data-addbase="${esc(p.id)}">Add to palette</button>`}</div>`;return}
+  d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}${p.missing?' <span class="tag">not owned</span>':""}</h2>${S.base.includes(p.id)?`<label class="lbl" style="display:flex;gap:8px;align-items:center;margin:6px 0 4px">Role ${roleSel(p.id,"sel")}</label>`:""}<div class="muted">${esc(p.b)}${p.l?" · "+esc(p.l):""}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><div class="row"><button class="btn ${pinned?"":"pri"}" id="pinBtn">${pinned?"Unpin":"Pin"}</button>${inB?"":`<button class="btn" data-addbase="${esc(p.id)}">Add to palette</button>`}</div>`;return}
  const r=sel.r,h=recHex(r),pp=parts(r.map(x=>x[1])),pinned=S.pins.some(x=>recKey(x)===sel.key),near=nearest(h);
  d.innerHTML=`<div class="big" style="background:${h}"></div><h2>${esc(nameFor(h))}</h2><div class="muted">${h}</div>
   <div class="lbl">Recipe</div><ul class="recipe">${r.map(([id],i)=>{const p=byId[id];return `<li><b>${pp[i]} part${pp[i]>1?"s":""}</b><span class="dot" style="background:${p.h}"></span>${esc(p.n)}${p.missing?`<span class="tag">not owned</span>`:""}</li>`}).join("")}</ul>
@@ -541,6 +546,11 @@ $("nClose").onclick=()=>$("newDlg").close();
 $("nColor").oninput=e=>{N.hex=e.target.value.toUpperCase();N.paint=null;renderNew()};
 $("nWhite").onchange=e=>{N.white=e.target.checked;renderNew()};
 $("nCreate").onclick=createNew;
+document.addEventListener("change",e=>{const el=e.target.closest("[data-role]");if(!el)return;const id=el.dataset.role,old=(S.roles||{})[id],v=el.value;S.roles=S.roles||{};
+ /* if the size was still the old role's default, move it to the new role's default */
+ const wasDef=!S.w||!S.w[id]||Math.abs(S.w[id]-(ROLE_W[old]||8))<1e-6;
+ if(v)S.roles[id]=v;else delete S.roles[id];if(wasDef&&S.w)delete S.w[id];
+ persistDraft();renderBase();if(view==="wheel")renderWheel();renderDetail()});
 $("nNameIn").oninput=e=>{N.nameEdited=!!e.target.value.trim()};
 $("schSel").onchange=e=>applyScheme(e.target.value);
 $("keySel").onchange=e=>applyScheme(S.scheme,e.target.value);
