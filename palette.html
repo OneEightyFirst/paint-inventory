@@ -31,7 +31,27 @@ input[type=search],input[type=text]{font:16px Archivo,sans-serif;min-height:42px
 .tabs{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .tabs button{padding:0 18px;min-height:42px;border:0;background:transparent}
 .tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
-.base{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:16px}
+.base{margin-bottom:16px}
+.bar{display:flex;width:100%;height:128px;border-radius:12px;overflow:hidden;box-shadow:inset 0 0 0 1px #0003;user-select:none;touch-action:none}
+.blk{position:relative;min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:10px 10px 8px;overflow:hidden}
+.blk .bt{display:grid;gap:1px;font-size:12px;line-height:1.25;min-width:0}
+.blk .bt b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .bt span{opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .bb{display:flex;align-items:center;gap:6px}
+.blk .pct{font:700 13px "Archivo Narrow",sans-serif;opacity:.85;margin-right:auto}
+.blk .x{border:0;background:#0000;color:inherit;width:26px;height:26px;border-radius:50%;font-size:17px;line-height:1;opacity:.75}
+.blk .x:hover{opacity:1;background:#0002}
+.blk .swap{border:0;border-radius:999px;font-size:11px;padding:3px 8px;background:#fff9;color:#1b1b1c;white-space:nowrap}
+.blk.miss{background-image:repeating-linear-gradient(135deg,#fff0 0 10px,#fff3 10px 12px)!important}
+.blk.miss::after{content:"Not owned";position:absolute;top:8px;right:8px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--acc);color:#1b1b1c;border-radius:4px;padding:1px 5px}
+.blk.narrow{padding:8px 4px;align-items:center}
+.blk.narrow .bt{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px}
+.blk.narrow .bt span,.blk.narrow .swap,.blk.narrow .pct,.blk.narrow::after{display:none}
+.hdl{flex:0 0 0;position:relative;z-index:2;cursor:col-resize}
+.hdl::before{content:"";position:absolute;top:0;bottom:0;left:-7px;width:14px}
+.hdl::after{content:"";position:absolute;top:50%;left:-3px;width:6px;height:34px;margin-top:-17px;border-radius:3px;background:#fffd;box-shadow:0 0 0 1px #0004;opacity:0;transition:opacity .15s}
+.bar:hover .hdl::after,.hdl:focus-visible::after,.hdl.drag::after{opacity:1}
+.barfoot{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .pchip{display:flex;align-items:center;gap:8px;padding:4px 4px 4px 4px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:14px}
 .pchip .dot{width:30px;height:30px}
 .pchip small{color:var(--mute);display:block;font-size:11px;line-height:1.1}
@@ -304,11 +324,23 @@ const pt=(cx,cy,r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)];
 function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1);return `M${cx} ${cy}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z`}
 
 /* ---------- rendering ---------- */
+/* palette strip: one full-width bar, each colour's width is how much of the model it covers.
+   Drag the handle between two colours to trade space between them. */
+const ROLE_W={"Base":30,"Secondary":20,"Accent":12,"Skin":10,"Metal":6,"Spot colour":3,"Shade wash":5,"Base shade":8,"Base highlight":5,"Secondary shade":5,"Leather / wood":6,"Secondary highlight":4,"White (tints)":3};
+const wOf=id=>{S.w=S.w||{};if(!(S.w[id]>0))S.w[id]=ROLE_W[(S.roles||{})[id]]||8;return S.w[id]};
 function renderBase(){
- $("baseStrip").innerHTML=S.base.map(id=>{const p=byId[id];if(!p)return"";
-  if(p.missing){const a=byId[p.alt];return `<span class="pchip miss" title="Ideal colour for this scheme; nothing in your rack is within ΔE ${FAR}"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${(S.roles||{})[id]?`<b class="role">${esc(S.roles[id])}</b> · `:""}Not owned · ${p.h}</small></span><button class="swap" data-swap="${esc(id)}" title="Use ${esc(a.n)} instead (ΔE ${p.altD.toFixed(1)})">Use ${esc(a.n)}</button><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}
-  const role=(S.roles||{})[id];return `<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${role?`<b class="role">${esc(role)}</b> · `:""}${esc(p.s)}</small></span><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}).join("")+`<button class="add" id="addBtn">+ Add paint</button>`;
+ const ids=S.base.filter(id=>byId[id]),tot=ids.reduce((s,id)=>s+wOf(id),0)||1;
+ const cells=ids.map((id,i)=>{const p=byId[id],w=wOf(id),pct=w/tot*100,role=(S.roles||{})[id],dark=lch(p.h)[0]<58,a=p.missing&&byId[p.alt];
+  return `<div class="blk${p.missing?" miss":""}" style="flex:${w} 1 0;background:${p.h};color:${dark?"#f4f2ec":"#1b1b1c"}" title="${esc(p.n)}${role?" · "+esc(role):""} · ${Math.round(pct)}%">
+   <div class="bt"><b>${esc(p.n)}</b>${role?`<span>${esc(role)}</span>`:""}<span>${p.missing?"Not owned · "+p.h:esc(p.s)}</span></div>
+   <div class="bb"><span class="pct">${Math.round(pct)}%</span>${a?`<button class="swap" data-swap="${esc(id)}" title="Use ${esc(a.n)} instead (ΔE ${p.altD.toFixed(1)})">Use ${esc(a.n)}</button>`:""}<button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></div>
+  </div>${i<ids.length-1?`<div class="hdl" data-hdl="${i}" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize ${esc(p.n)} and ${esc(byId[ids[i+1]].n)}"></div>`:""}`}).join("");
+ $("baseStrip").innerHTML=(ids.length?`<div class="bar" id="bar">${cells}</div>`:"")+`<div class="barfoot"><button class="add" id="addBtn">+ Add paint</button>${ids.length>1?`<span class="muted">Drag between colours to set how much of the model each covers</span><button class="link" id="evenBtn">Reset sizes</button>`:""}</div>`;
+ fitBlocks();
 }
+/* a colour too thin for its label turns the name sideways */
+function fitBlocks(){const bar=$("bar");if(!bar)return;bar.querySelectorAll(".blk").forEach(el=>el.classList.toggle("narrow",el.getBoundingClientRect().width<96))}
+window.addEventListener("resize",fitBlocks);
 function renderWheel(){
  const W=wheel();
  if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty"><p style="margin:0 0 14px">Add at least two paints, or start from a scheme.</p><button class="btn pri" data-opennew="1">+ New palette</button></div></div>`;return}
@@ -385,7 +417,7 @@ function applyScheme(scheme,keyId){
  if(!key){toast("Add a coloured paint first");$("schSel").value="auto";return}
  N={scheme,paint:key,hex:byId[key].h,white:S.base.some(id=>byId[id]&&isWhite(byId[id]))||!S.base.length,size:S.size||S.base.length||6};
  const plan=planNew(),old=S.name,auto=!old||/( · |^Zorn$)/.test(old);
- S.size=N.size;S.roles=Object.fromEntries(plan.filter(x=>x.role).map(x=>[x.p.id,x.role]));S.base=plan.map(x=>x.p.id);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));S.scheme=scheme;
+ S.size=N.size;S.w={};S.roles=Object.fromEntries(plan.filter(x=>x.role).map(x=>[x.p.id,x.role]));S.base=plan.map(x=>x.p.id);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));S.scheme=scheme;
  if(auto)S.name=`${SCHEMES.find(x=>x[0]===scheme)[1]} · ${byId[key].n}`;
  sel=null;persistDraft();render()}
 function render(){renderBase();renderSchemeBar();renderPins();renderDetail();
@@ -461,8 +493,8 @@ function createNew(){const plan=planNew();S={roles:Object.fromEntries(plan.filte
  sel=null;view="wheel";$("newDlg").close();persistDraft();render()}
 
 /* ---------- share / save ---------- */
-function encode(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.name,b:S.base,p:S.pins,s:S.scheme,z:S.size,r:S.roles||{}}))))}
-function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {roles:o.r||{},size:o.z||0,scheme:o.s||"auto",name:o.n||"",base:(o.b||[]).map(reg).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[reg(id)]))}}catch(e){return null}}
+function encode(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.name,b:S.base,p:S.pins,s:S.scheme,z:S.size,r:S.roles||{},w:S.w||{}}))))}
+function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {w:o.w||{},roles:o.r||{},size:o.z||0,scheme:o.s||"auto",name:o.n||"",base:(o.b||[]).map(reg).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[reg(id)]))}}catch(e){return null}}
 function toast(t){const el=$("toast");el.textContent=t;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),2000)}
 function persistDraft(){try{localStorage.setItem("paletteDraft",encode())}catch(e){}}
 
@@ -473,12 +505,13 @@ document.addEventListener("click",async e=>{
  if(t.dataset.paint){sel={paint:t.dataset.paint};renderWheel();renderDetail();renderPins();return}
  if(t.dataset.addbase){if(!S.base.includes(t.dataset.addbase)){S.base.push(t.dataset.addbase);S.scheme="auto"}persistDraft();render();return}
  if(t.dataset.r){choose(t);return}
+ if(t.id==="evenBtn"){S.w={};persistDraft();renderBase();return}
  if(t.id==="addBtn"){renderPicker();$("picker").showModal();return}
  if(t.id==="newBtn"||t.dataset.opennew){N.nameEdited=false;renderNew();$("newDlg").showModal();$("nCreate").focus();return}
  if(t.dataset.size){N.size=+t.dataset.size;renderNew();return}
  if(t.dataset.sch){N.scheme=t.dataset.sch;renderNew();return}
  if(t.dataset.start){N.paint=t.dataset.start;renderNew();return}
- if(t.dataset.swap){const id=t.dataset.swap,a=byId[id].alt;S.base=S.base.map(x=>x===id?a:x);if(S.roles&&S.roles[id]){S.roles[a]=S.roles[id];delete S.roles[id]}S.pins=S.pins.map(r=>r.map(([i,w])=>[i===id?a:i,w]));S.scheme="auto";sel=null;persistDraft();render();return}
+ if(t.dataset.swap){const id=t.dataset.swap,a=byId[id].alt;S.base=S.base.map(x=>x===id?a:x);if(S.roles&&S.roles[id]){S.roles[a]=S.roles[id];delete S.roles[id]}if(S.w&&S.w[id]){S.w[a]=S.w[id];delete S.w[id]}S.pins=S.pins.map(r=>r.map(([i,w])=>[i===id?a:i,w]));S.scheme="auto";sel=null;persistDraft();render();return}
  if(t.dataset.rm){S.scheme="auto";S.base=S.base.filter(id=>id!==t.dataset.rm);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));sel=null;persistDraft();render();return}
  if(t.dataset.v){view=t.dataset.v;render();return}
  if(t.dataset.f){pFilter=t.dataset.f;renderPicker();return}
@@ -493,7 +526,7 @@ document.addEventListener("click",async e=>{
  if(t.dataset.sync==="now"){pullRemote();return}
  if(t.dataset.sync==="off"){SYNC.set(null);syncState={ok:null,at:null,msg:""};toast("Disconnected; palettes stay in this browser");renderSaved();return}
  if(t.dataset.loadset){const k=t.dataset.loadset,ids=setIds(k);S={name:SETS[k].name,base:ids,pins:[],scheme:"auto",roles:{}};sel=null;view="wheel";persistDraft();render();return}
- if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={roles:s.roles||{},size:s.size||0,scheme:s.scheme||"auto",name:s.name,base:s.base.map(reg).filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[reg(id)]))};sel=null;view="wheel";persistDraft();render();return}
+ if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={w:s.w||{},roles:s.roles||{},size:s.size||0,scheme:s.scheme||"auto",name:s.name,base:s.base.map(reg).filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[reg(id)]))};sel=null;view="wheel";persistDraft();render();return}
  if(t.dataset.del!==undefined){const L=store.get(),s=L[+t.dataset.del];if(!confirm(`Delete "${s.name||"Untitled"}"?`))return;L.splice(+t.dataset.del,1);store.set(L);render();return}
 });
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&(e.target.dataset.r||e.target.dataset.paint)){e.preventDefault();e.target.dispatchEvent(new MouseEvent("click",{bubbles:true}))}});
@@ -511,12 +544,25 @@ $("sizeSel").onchange=e=>{S.size=+e.target.value;applyScheme(S.scheme,$("keySel"
 $("nBlank").onclick=()=>{S={name:"",base:[],pins:[],scheme:"auto",roles:{}};sel=null;view="wheel";$("newDlg").close();persistDraft();render()};
 $("pname").oninput=e=>{S.name=e.target.value;persistDraft();const h=document.querySelector(".sheet h3");if(h)h.textContent=S.name||"Untitled palette"};
 $("saveBtn").onclick=()=>{if(!S.base.length){toast("Add some paints first");return}
- const L=store.get(),name=S.name.trim()||"Untitled palette",i=L.findIndex(x=>x.name===name),rec={name,base:S.base,pins:S.pins,scheme:S.scheme,size:S.size,roles:S.roles||{},at:Date.now()};
+ const L=store.get(),name=S.name.trim()||"Untitled palette",i=L.findIndex(x=>x.name===name),rec={name,base:S.base,pins:S.pins,scheme:S.scheme,size:S.size,roles:S.roles||{},w:S.w||{},at:Date.now()};
  if(i>=0)L[i]=rec;else L.unshift(rec);toast(store.set(L)?(i>=0?"Updated":"Saved"):"Couldn't save here; use Copy link");S.name=name;render()};
 $("shareBtn").onclick=async()=>{const url=location.href.split("#")[0]+"#p="+encode();
  try{await navigator.clipboard.writeText(url);toast("Link copied")}catch(e){prompt("Copy this link",url)}};
 
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)pullRemote(true)});
+/* resizing: drag a handle, or focus it and use the arrow keys */
+let drag=null;
+document.addEventListener("pointerdown",e=>{const h=e.target.closest(".hdl");if(!h)return;e.preventDefault();
+ const ids=S.base.filter(id=>byId[id]),i=+h.dataset.hdl,bar=$("bar"),tot=ids.reduce((s,id)=>s+wOf(id),0);
+ drag={h,a:ids[i],b:ids[i+1],x:e.clientX,wa:wOf(ids[i]),wb:wOf(ids[i+1]),per:tot/bar.getBoundingClientRect().width};h.classList.add("drag");h.setPointerCapture(e.pointerId)});
+document.addEventListener("pointermove",e=>{if(!drag)return;const min=(drag.wa+drag.wb)*.06,d=(e.clientX-drag.x)*drag.per;
+ const na=Math.max(min,Math.min(drag.wa+drag.wb-min,drag.wa+d));S.w[drag.a]=na;S.w[drag.b]=drag.wa+drag.wb-na;
+ const blks=$("bar").querySelectorAll(".blk"),ids=S.base.filter(id=>byId[id]),tot=ids.reduce((s,id)=>s+wOf(id),0);
+ ids.forEach((id,k)=>{const el=blks[k];el.style.flex=`${wOf(id)} 1 0`;const pct=wOf(id)/tot*100;el.querySelector(".pct").textContent=Math.round(pct)+"%"});fitBlocks()});
+document.addEventListener("pointerup",()=>{if(!drag)return;drag.h.classList.remove("drag");drag=null;persistDraft();renderBase()});
+document.addEventListener("keydown",e=>{const h=e.target.closest&&e.target.closest(".hdl");if(!h||!["ArrowLeft","ArrowRight"].includes(e.key))return;e.preventDefault();
+ const ids=S.base.filter(id=>byId[id]),i=+h.dataset.hdl,a=ids[i],b=ids[i+1],step=(wOf(a)+wOf(b))*.04*(e.key==="ArrowRight"?1:-1),min=(wOf(a)+wOf(b))*.06;
+ const na=Math.max(min,Math.min(wOf(a)+wOf(b)-min,wOf(a)+step));S.w[b]=wOf(a)+wOf(b)-na;S.w[a]=na;persistDraft();renderBase();$("bar").querySelector(`[data-hdl="${i}"]`).focus()});
 /* ---------- boot ---------- */
 (function(){const m=location.hash.match(/#p=(.+)/);let s=m&&decode(m[1]);
  if(!s){try{const d=localStorage.getItem("paletteDraft");s=d&&decode(d)}catch(e){}}
