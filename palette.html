@@ -321,7 +321,7 @@ function wheel(){
  return {rings,white};
 }
 const pt=(cx,cy,r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)];
-function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1);return `M${cx} ${cy}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z`}
+function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1),lg=a1-a0>Math.PI?1:0;if(a1-a0>=2*Math.PI-1e-3)return `M${cx-r} ${cy}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`;return `M${cx} ${cy}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 ${lg} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z`}
 
 /* ---------- rendering ---------- */
 /* palette strip: one full-width bar, each colour's width is how much of the model it covers.
@@ -344,24 +344,28 @@ window.addEventListener("resize",fitBlocks);
 function renderWheel(){
  const W=wheel();
  if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty"><p style="margin:0 0 14px">Add at least two paints, or start from a scheme.</p><button class="btn pri" data-opennew="1">+ New palette</button></div></div>`;return}
- const n=W.rings.length,cx=340,cy=330,R=[150,250],half=Math.PI/n,ov=.006;
+ const n=W.rings.length,cx=340,cy=330,R=[150,250],ov=.006;
+ /* wedge size follows the palette bar: a palette paint gets its share; fill-in bottles get a small fixed slice */
+ const baseW=S.base.filter(id=>byId[id]).map(wOf),avg=baseW.length?baseW.reduce((a,b)=>a+b,0)/baseW.length:1;
+ const wts=W.rings.map(r=>{const id=r[0][0][0];return S.base.includes(id)?wOf(id):avg*.35}),tw=wts.reduce((a,b)=>a+b,0);
+ const span=wts.map(w=>w/tw*2*Math.PI),mid=[];{let a=-span[0]/2;span.forEach((s,i)=>{mid.push(a+s/2);a+=s})}
  let g="",labels="",mark="",over=[];
  /* outer ring as full slices to the centre, the tinted ring layered over the middle */
  [[1,R[1],"br0"],[0,R[0],"br1"]].forEach(([k,r,f])=>{
   W.rings.forEach((ring,i)=>{const rec=ring[1-k];if(!rec)return;
    const rr=r;
-   const h=recHex(rec),deg=i/n*360;
+   const h=recHex(rec),deg=mid[i]*180/Math.PI,half=span[i]/2;
    const miss=rec.some(([id])=>byId[id]&&byId[id].missing);
    g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})"><path d="${slice(cx,cy,rr,-half-ov,half+ov)}" fill="${h}" filter="url(#${f})" data-r='${esc(JSON.stringify(rec))}' tabindex="0" aria-label="${esc(nameFor(h))}${miss?", uses a paint you don't own":""}"><title>${esc(nameFor(h))}${miss?" (uses a paint you don't own)":""}</title></path></g>`;
-   if(miss)over.push({deg,rr,k});
-   if(sel&&sel.key&&sel.key===recKey(rec)){const rm=k===1?(W.white?(R[0]+R[1])/2:R[1]*.7):R[0]*.62,[mx,my]=pt(cx,cy,rm,i/n*2*Math.PI);mark=`<circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#fff" stroke-width="3"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#111" stroke-width="1.2"/>`}
+   if(miss)over.push({deg,rr,k,half});
+   if(sel&&sel.key&&sel.key===recKey(rec)){const rm=k===1?(W.white?(R[0]+R[1])/2:R[1]*.7):R[0]*.62,[mx,my]=pt(cx,cy,rm,mid[i]);mark=`<circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#fff" stroke-width="3"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#111" stroke-width="1.2"/>`}
   })});
  const inner={1:W.white?R[0]:0,0:0};
- over.forEach(({deg,rr,k})=>{const r0=Math.max(inner[k]+5,24),r1=rr-5,a0=-half+.03,a1=half-.03,[x1,y1]=pt(cx,cy,r1,a0),[x2,y2]=pt(cx,cy,r1,a1),[x3,y3]=pt(cx,cy,r0,a1),[x4,y4]=pt(cx,cy,r0,a0);
+ over.forEach(({deg,rr,k,half})=>{const r0=Math.max(inner[k]+5,24),r1=rr-5,a0=-half+.03,a1=half-.03,[x1,y1]=pt(cx,cy,r1,a0),[x2,y2]=pt(cx,cy,r1,a1),[x3,y3]=pt(cx,cy,r0,a1),[x4,y4]=pt(cx,cy,r0,a0);
   g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})" pointer-events="none"><path d="M${x1} ${y1}A${r1} ${r1} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r0} ${r0} 0 0 0 ${x4} ${y4}Z" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.6" stroke-dasharray="4 4"/></g>`});
  /* bottle name beside every wedge; the palette's own paints in bold */
  W.rings.forEach((ring,i)=>{const r=ring[0],lab=byId[r[0][0]].n,isBase=S.base.includes(r[0][0]);
-  const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[1]+18,a),sn=Math.sin(a),anc=Math.abs(sn)<.07?"middle":sn>0?"start":"end",dy=Math.cos(a)>.8?-2:Math.cos(a)<-.8?12:4;
+  const a=mid[i],[x,y]=pt(cx,cy,R[1]+18,a),sn=Math.sin(a),anc=Math.abs(sn)<.07?"middle":sn>0?"start":"end",dy=Math.cos(a)>.8?-2:Math.cos(a)<-.8?12:4;
   labels+=`<text x="${x.toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anc}"${isBase?' style="font-weight:700;fill:#4a4740"':""}>${esc(lab)}</text>`});
  let vals="";
  {const bw=92,gap=10,x0=(520-5*bw-4*gap)/2;
@@ -505,7 +509,7 @@ document.addEventListener("click",async e=>{
  if(t.dataset.paint){sel={paint:t.dataset.paint};renderWheel();renderDetail();renderPins();return}
  if(t.dataset.addbase){if(!S.base.includes(t.dataset.addbase)){S.base.push(t.dataset.addbase);S.scheme="auto"}persistDraft();render();return}
  if(t.dataset.r){choose(t);return}
- if(t.id==="evenBtn"){S.w={};persistDraft();renderBase();return}
+ if(t.id==="evenBtn"){S.w={};persistDraft();render();return}
  if(t.id==="addBtn"){renderPicker();$("picker").showModal();return}
  if(t.id==="newBtn"||t.dataset.opennew){N.nameEdited=false;renderNew();$("newDlg").showModal();$("nCreate").focus();return}
  if(t.dataset.size){N.size=+t.dataset.size;renderNew();return}
@@ -558,11 +562,11 @@ document.addEventListener("pointerdown",e=>{const h=e.target.closest(".hdl");if(
 document.addEventListener("pointermove",e=>{if(!drag)return;const min=(drag.wa+drag.wb)*.06,d=(e.clientX-drag.x)*drag.per;
  const na=Math.max(min,Math.min(drag.wa+drag.wb-min,drag.wa+d));S.w[drag.a]=na;S.w[drag.b]=drag.wa+drag.wb-na;
  const blks=$("bar").querySelectorAll(".blk"),ids=S.base.filter(id=>byId[id]),tot=ids.reduce((s,id)=>s+wOf(id),0);
- ids.forEach((id,k)=>{const el=blks[k];el.style.flex=`${wOf(id)} 1 0`;const pct=wOf(id)/tot*100;el.querySelector(".pct").textContent=Math.round(pct)+"%"});fitBlocks()});
-document.addEventListener("pointerup",()=>{if(!drag)return;drag.h.classList.remove("drag");drag=null;persistDraft();renderBase()});
+ ids.forEach((id,k)=>{const el=blks[k];el.style.flex=`${wOf(id)} 1 0`;const pct=wOf(id)/tot*100;el.querySelector(".pct").textContent=Math.round(pct)+"%"});fitBlocks();if(view==="wheel"&&!drag.raf)drag.raf=requestAnimationFrame(()=>{if(drag)drag.raf=0;renderWheel()})});
+document.addEventListener("pointerup",()=>{if(!drag)return;drag.h.classList.remove("drag");drag=null;persistDraft();renderBase();if(view==="wheel")renderWheel()});
 document.addEventListener("keydown",e=>{const h=e.target.closest&&e.target.closest(".hdl");if(!h||!["ArrowLeft","ArrowRight"].includes(e.key))return;e.preventDefault();
  const ids=S.base.filter(id=>byId[id]),i=+h.dataset.hdl,a=ids[i],b=ids[i+1],step=(wOf(a)+wOf(b))*.04*(e.key==="ArrowRight"?1:-1),min=(wOf(a)+wOf(b))*.06;
- const na=Math.max(min,Math.min(wOf(a)+wOf(b)-min,wOf(a)+step));S.w[b]=wOf(a)+wOf(b)-na;S.w[a]=na;persistDraft();renderBase();$("bar").querySelector(`[data-hdl="${i}"]`).focus()});
+ const na=Math.max(min,Math.min(wOf(a)+wOf(b)-min,wOf(a)+step));S.w[b]=wOf(a)+wOf(b)-na;S.w[a]=na;persistDraft();renderBase();if(view==="wheel")renderWheel();$("bar").querySelector(`[data-hdl="${i}"]`).focus()});
 /* ---------- boot ---------- */
 (function(){const m=location.hash.match(/#p=(.+)/);let s=m&&decode(m[1]);
  if(!s){try{const d=localStorage.getItem("paletteDraft");s=d&&decode(d)}catch(e){}}
