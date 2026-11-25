@@ -254,9 +254,13 @@ const RAT=[.25,1/3,.5,1,1.5,2,3,4,6,8];
 function wheel(){
  const ps=S.base.map(id=>byId[id]).filter(Boolean);if(ps.length<2)return null;
  const white=ps.find(isWhite)||null,cols=ps.filter(p=>!isWhite(p)),src=cols.length>=2?cols:ps;
- const cand=[];const push=r=>{const h=recHex(r);if(cand.some(c=>de(c.h,h)<2.5))return;const [L,C,H]=lch(h);cand.push({r,h,L,C,H})};
- src.forEach(p=>push([[p.id,1]]));
- for(let i=0;i<src.length;i++)for(let j=i+1;j<src.length;j++)for(const [a,b] of [[3,1],[1,1],[1,3]])push([[src[i].id,a],[src[j].id,b]]);
+ /* the palette's own bottles, plus the bottles you own that sit closest to what they'd mix to:
+    every wedge is a real paint, no mixing needed */
+ const cand=[],have=new Set();const push=p=>{if(have.has(p.id))return;have.add(p.id);const [L,C,H]=lch(p.h);cand.push({r:[[p.id,1]],h:p.h,L,C,H})};
+ src.forEach(push);
+ const pool=OPAQUE.filter(p=>!isWhite(p));
+ for(let i=0;i<src.length;i++)for(let j=i+1;j<src.length;j++)for(const [a,b] of [[3,1],[1,1],[1,3]]){
+  const h=recHex([[src[i].id,a],[src[j].id,b]]),m=nearest(h,1,pool.filter(p=>!have.has(p.id)))[0];if(m&&m.d<12)push(m.p)}
  cand.sort((x,y)=>x.H-y.H);
  let w=cand;if(cand.length>18){const st=cand.length/18;w=Array.from({length:18},(_,k)=>cand[Math.floor(k*st)])}
  let k=0,best=1e9;w.forEach((x,i)=>{const d=Math.min(Math.abs(x.H-88),360-Math.abs(x.H-88));if(x.C>15&&d<best){best=d;k=i}});
@@ -294,10 +298,10 @@ function renderWheel(){
  const inner={1:W.white?R[0]:0,0:0};
  over.forEach(({deg,rr,k})=>{const r0=Math.max(inner[k]+5,24),r1=rr-5,a0=-half+.03,a1=half-.03,[x1,y1]=pt(cx,cy,r1,a0),[x2,y2]=pt(cx,cy,r1,a1),[x3,y3]=pt(cx,cy,r0,a1),[x4,y4]=pt(cx,cy,r0,a0);
   g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})" pointer-events="none"><path d="M${x1} ${y1}A${r1} ${r1} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r0} ${r0} 0 0 0 ${x4} ${y4}Z" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.6" stroke-dasharray="4 4"/></g>`});
- /* a name beside every wedge: the bottle's own name for a straight paint, a colour name for a mix */
- W.rings.forEach((ring,i)=>{const r=ring[0],lab=r.length===1?byId[r[0][0]].n:nameFor(recHex(r));
+ /* bottle name beside every wedge; the palette's own paints in bold */
+ W.rings.forEach((ring,i)=>{const r=ring[0],lab=byId[r[0][0]].n,isBase=S.base.includes(r[0][0]);
   const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[1]+18,a),sn=Math.sin(a),anc=Math.abs(sn)<.2?"middle":sn>0?"start":"end",dy=Math.cos(a)>.8?-2:Math.cos(a)<-.8?12:4;
-  labels+=`<text x="${x.toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anc}"${r.length===1?' style="font-weight:700;fill:#4a4740"':""}>${esc(lab)}</text>`});
+  labels+=`<text x="${x.toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anc}"${isBase?' style="font-weight:700;fill:#4a4740"':""}>${esc(lab)}</text>`});
  let vals="";
  {const bw=92,gap=10,x0=(520-5*bw-4*gap)/2;
   vals=`<svg class="vals" viewBox="0 0 520 150" role="group" aria-label="Skin tone reference">`+SKIN.map((p,i)=>{const x=x0+i*(bw+gap);
@@ -307,9 +311,11 @@ function renderWheel(){
 }
 function renderDetail(){
  const d=$("detail");
- if(!sel){d.innerHTML=`<p class="muted" style="margin:0">Tap a mix for its recipe.</p>`;return}
+ if(!sel){d.innerHTML=`<p class="muted" style="margin:0">Tap a colour for details.</p>`;return}
  if(sel.paint){const p=byId[sel.paint],inB=S.base.includes(p.id);
   d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}</h2><div class="muted">${esc(p.b)} · ${esc(p.l)}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><button class="btn ${inB?"":"pri"}" data-addbase="${esc(p.id)}" ${inB?"disabled":""}>${inB?"In this palette":"Add to palette"}</button>`;return}
+ if(sel.r&&sel.r.length===1){const p=byId[sel.r[0][0]],pinned=S.pins.some(x=>recKey(x)===sel.key),inB=S.base.includes(p.id);
+  d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}${p.missing?' <span class="tag">not owned</span>':""}</h2><div class="muted">${esc(p.b)}${p.l?" · "+esc(p.l):""}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><div class="row"><button class="btn ${pinned?"":"pri"}" id="pinBtn">${pinned?"Unpin":"Pin"}</button>${inB?"":`<button class="btn" data-addbase="${esc(p.id)}">Add to palette</button>`}</div>`;return}
  const r=sel.r,h=recHex(r),pp=parts(r.map(x=>x[1])),pinned=S.pins.some(x=>recKey(x)===sel.key),near=nearest(h);
  d.innerHTML=`<div class="big" style="background:${h}"></div><h2>${esc(nameFor(h))}</h2><div class="muted">${h}</div>
   <div class="lbl">Recipe</div><ul class="recipe">${r.map(([id],i)=>{const p=byId[id];return `<li><b>${pp[i]} part${pp[i]>1?"s":""}</b><span class="dot" style="background:${p.h}"></span>${esc(p.n)}${p.missing?`<span class="tag">not owned</span>`:""}</li>`}).join("")}</ul>
