@@ -341,7 +341,7 @@ function renderSaved(){
 }
 function renderSchemeBar(){
  const keys=S.base.map(id=>byId[id]).filter(p=>p&&!isWhite(p)&&lch(p.h)[1]>6);
- $("schSel").innerHTML=`<option value="auto">Auto (my picks)</option>`+SCHEMES.filter(x=>x[0]!=="zorn").map(([k,l])=>`<option value="${k}">${l}</option>`).join("");
+ $("schSel").innerHTML=`<option value="auto">Auto (my picks)</option>`+SCHEMES.map(([k,l])=>`<option value="${k}">${l}</option>`).join("");
  $("schSel").value=S.scheme||"auto";
  $("keySel").innerHTML=keys.map(p=>`<option value="${esc(p.id)}">${esc(p.n)}</option>`).join("");
  if(keys[0])$("keySel").value=keys[0].id;
@@ -373,9 +373,9 @@ function renderPicker(){
 }
 
 /* ---------- new palette: start colour + scheme -> your bottles ---------- */
-const SCHEMES=[["mono","Monochromatic",null],["ana","Analogous",[-30,0,30]],["comp","Complementary",[0,180]],["split","Split complementary",[0,150,210]],["tri","Triadic",[0,120,240]],["tet","Tetradic",[0,90,180,270]],["zorn","Zorn",null]];
-const SETS={jb12:{name:"John Blanche Vol 1–2",ids:["The Darkness","Ivory White","Moonbeam Yellow","Ironclad Grey","Blighted Green","Banshee Brown","Bloodmoon Red","Warm Skin Shade","Grimdark Shadow","Emperor Gold","Fiery Vermilion","Blanched Berry","Sunburst Ochre","Midnight Olive","Tainted Garden","Ruddy Terra","Turnbull Turquoise","Voodoo Shade","#713509","Heavy Metal"]}};
-const setIds=k=>SETS[k].ids.map(n=>n.startsWith("#")?ideal(n):(PAINTS.find(p=>p.b==="Army Painter"&&p.n===n)||{}).id).filter(Boolean);
+const SCHEMES=[["mono","Monochromatic",null],["ana","Analogous",[-30,0,30]],["comp","Complementary",[0,180]],["split","Split complementary",[0,150,210]],["tri","Triadic",[0,120,240]],["tet","Tetradic",[0,90,180,270]]];
+const SETS={zorn:{name:"Zorn",match:["#C4952F","#C8232C","#252A33","#F7F6F1"]},jb12:{name:"John Blanche Vol 1–2",ids:["The Darkness","Ivory White","Moonbeam Yellow","Ironclad Grey","Blighted Green","Banshee Brown","Bloodmoon Red","Warm Skin Shade","Grimdark Shadow","Emperor Gold","Fiery Vermilion","Blanched Berry","Sunburst Ochre","Midnight Olive","Tainted Garden","Ruddy Terra","Turnbull Turquoise","Voodoo Shade","#713509","Heavy Metal"]}};
+const setIds=k=>SETS[k].match?(()=>{const used=new Set();return SETS[k].match.map(h=>{const m=OPAQUE.filter(p=>!used.has(p.id)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0].p;used.add(m.id);return m.id})})():SETS[k].ids.map(n=>n.startsWith("#")?ideal(n):(PAINTS.find(p=>p.b==="Army Painter"&&p.n===n)||{}).id).filter(Boolean);
 const isSet=k=>!!SETS[k];
 const ZORN=["#C4952F","#C8232C","#252A33"];
 let N={scheme:"comp",hex:"#C8232C",paint:null,white:true,size:6};
