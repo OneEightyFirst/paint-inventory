@@ -40,6 +40,8 @@ input[type=search],input[type=text]{font:16px Archivo,sans-serif;min-height:42px
 .pchip.miss{border-style:dashed;border-color:var(--acc)}
 .pchip.miss .dot{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--acc)}
 .pchip.miss small{color:var(--acc)}
+.role{font-weight:600;color:var(--ink)}
+.pchip.miss .role{color:var(--acc)}
 .swap{border:0;background:color-mix(in srgb,var(--acc) 20%,transparent);color:var(--ink);border-radius:999px;font-size:12px;padding:4px 10px;white-space:nowrap}
 .tag{font-size:11px;font-weight:600;color:var(--acc);border:1px solid var(--acc);border-radius:999px;padding:0 6px;margin-left:4px;white-space:nowrap}
 .add{min-height:40px;border-radius:999px;border:1px dashed var(--mute);background:transparent;padding:0 16px}
@@ -140,6 +142,7 @@ dialog::backdrop{background:#0008}
  <div class="row" style="align-items:center">
   <label class="muted" for="schSel">Scheme</label>
   <select id="schSel" class="sel"></select>
+  <span id="sizeWrap" class="row" style="align-items:center"><select id="sizeSel" class="sel" aria-label="Number of bottles"></select></span>
   <span id="keyWrap" class="row" style="align-items:center"><label class="muted" for="keySel">from</label><select id="keySel" class="sel"></select></span>
   <button class="btn pri" id="newBtn">+ New palette</button>
  </div>
@@ -174,12 +177,13 @@ dialog::backdrop{background:#0008}
  <div class="db">
   <div class="lbl">Scheme</div>
   <div class="fchips" id="nScheme"></div>
+  <div id="nSizeWrap"><div class="lbl">Number of colours</div><div class="fchips" id="nSize"></div></div>
   <div id="nStartWrap">
    <div class="lbl">Starting colour</div>
    <div class="start"><span class="sw" id="nSw"></span><div><b id="nName"></b><div class="muted" id="nSub"></div></div><input type="color" id="nColor" aria-label="Any colour" title="Any colour"></div>
    <div class="mini" id="nMini" style="margin-top:10px" aria-label="Or pick a bottle"></div>
   </div>
-  <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="nWhite" checked> Add a white for tints</label>
+  <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="nWhite" checked> Also add a white for tints</label>
   <div class="lbl">Your bottles for this</div>
   <div class="preview" id="nPrev"></div>
  </div>
@@ -260,7 +264,7 @@ function wheel(){
  const cand=[],have=new Set();const push=p=>{if(have.has(p.id))return;have.add(p.id);const [L,C,H]=lch(p.h);cand.push({r:[[p.id,1]],h:p.h,L,C,H})};
  src.forEach(push);
  const pool=OPAQUE.filter(p=>!isWhite(p));
- if(src.length<10)for(let i=0;i<src.length;i++)for(let j=i+1;j<src.length;j++)for(const [a,b] of [[3,1],[1,1],[1,3]]){
+ if(src.length<6)for(let i=0;i<src.length;i++)for(let j=i+1;j<src.length;j++)for(const [a,b] of [[3,1],[1,1],[1,3]]){
   const h=recHex([[src[i].id,a],[src[j].id,b]]),m=nearest(h,1,pool.filter(p=>!have.has(p.id)))[0];if(m&&m.d<12)push(m.p)}
  cand.sort((x,y)=>x.H-y.H);
  const cap=Math.max(18,src.length);let w=cand;if(cand.length>cap){const st=cand.length/cap;w=Array.from({length:cap},(_,k)=>cand[Math.floor(k*st)])}
@@ -278,8 +282,8 @@ function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1
 /* ---------- rendering ---------- */
 function renderBase(){
  $("baseStrip").innerHTML=S.base.map(id=>{const p=byId[id];if(!p)return"";
-  if(p.missing){const a=byId[p.alt];return `<span class="pchip miss" title="Ideal colour for this scheme; nothing in your rack is within ΔE ${FAR}"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>Not owned · ${p.h}</small></span><button class="swap" data-swap="${esc(id)}" title="Use ${esc(a.n)} instead (ΔE ${p.altD.toFixed(1)})">Use ${esc(a.n)}</button><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}
-  return `<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${esc(p.s)}</small></span><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}).join("")+`<button class="add" id="addBtn">+ Add paint</button>`;
+  if(p.missing){const a=byId[p.alt];return `<span class="pchip miss" title="Ideal colour for this scheme; nothing in your rack is within ΔE ${FAR}"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${(S.roles||{})[id]?`<b class="role">${esc(S.roles[id])}</b> · `:""}Not owned · ${p.h}</small></span><button class="swap" data-swap="${esc(id)}" title="Use ${esc(a.n)} instead (ΔE ${p.altD.toFixed(1)})">Use ${esc(a.n)}</button><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}
+  const role=(S.roles||{})[id];return `<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${role?`<b class="role">${esc(role)}</b> · `:""}${esc(p.s)}</small></span><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}).join("")+`<button class="add" id="addBtn">+ Add paint</button>`;
 }
 function renderWheel(){
  const W=wheel();
@@ -316,7 +320,7 @@ function renderDetail(){
  if(sel.paint){const p=byId[sel.paint],inB=S.base.includes(p.id);
   d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}</h2><div class="muted">${esc(p.b)} · ${esc(p.l)}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><button class="btn ${inB?"":"pri"}" data-addbase="${esc(p.id)}" ${inB?"disabled":""}>${inB?"In this palette":"Add to palette"}</button>`;return}
  if(sel.r&&sel.r.length===1){const p=byId[sel.r[0][0]],pinned=S.pins.some(x=>recKey(x)===sel.key),inB=S.base.includes(p.id);
-  d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}${p.missing?' <span class="tag">not owned</span>':""}</h2><div class="muted">${esc(p.b)}${p.l?" · "+esc(p.l):""}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><div class="row"><button class="btn ${pinned?"":"pri"}" id="pinBtn">${pinned?"Unpin":"Pin"}</button>${inB?"":`<button class="btn" data-addbase="${esc(p.id)}">Add to palette</button>`}</div>`;return}
+  d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}${p.missing?' <span class="tag">not owned</span>':""}</h2>${(S.roles||{})[p.id]?`<div class="lbl" style="margin:2px 0 4px">${esc(S.roles[p.id])}</div>`:""}<div class="muted">${esc(p.b)}${p.l?" · "+esc(p.l):""}</div><p style="margin:8px 0 12px">${esc(p.s)} · ${p.h}</p><div class="row"><button class="btn ${pinned?"":"pri"}" id="pinBtn">${pinned?"Unpin":"Pin"}</button>${inB?"":`<button class="btn" data-addbase="${esc(p.id)}">Add to palette</button>`}</div>`;return}
  const r=sel.r,h=recHex(r),pp=parts(r.map(x=>x[1])),pinned=S.pins.some(x=>recKey(x)===sel.key),near=nearest(h);
  d.innerHTML=`<div class="big" style="background:${h}"></div><h2>${esc(nameFor(h))}</h2><div class="muted">${h}</div>
   <div class="lbl">Recipe</div><ul class="recipe">${r.map(([id],i)=>{const p=byId[id];return `<li><b>${pp[i]} part${pp[i]>1?"s":""}</b><span class="dot" style="background:${p.h}"></span>${esc(p.n)}${p.missing?`<span class="tag">not owned</span>`:""}</li>`}).join("")}</ul>
@@ -329,9 +333,11 @@ function renderPins(){
 }
 function renderSaved(){
  const L=store.get();
- $("view").innerHTML=L.length?`<div class="saved">${L.map((s,i)=>{const cols=s.base.map(id=>byId[reg(id)]?.h).filter(Boolean).concat(s.pins.map(recHex));
+ const built=Object.entries(SETS).map(([k,o])=>{const ids=setIds(k),cols=ids.map(id=>byId[id].h);
+  return `<div class="sv"><div class="strip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</div><div class="meta"><b>${esc(o.name)}</b><small>${ids.length} paints · built in</small></div><button class="btn" data-loadset="${k}">Open</button></div>`}).join("");
+ $("view").innerHTML=`<div class="saved">${built}</div>`+(L.length?`<div class="saved" style="margin-top:10px">${L.map((s,i)=>{const cols=s.base.map(id=>byId[reg(id)]?.h).filter(Boolean).concat(s.pins.map(recHex));
   return `<div class="sv"><div class="strip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</div><div class="meta"><b>${esc(s.name||"Untitled")}</b><small>${s.base.length} paints · ${s.pins.length} pinned</small></div><button class="btn" data-load="${i}">Open</button><button class="link" data-del="${i}">Delete</button></div>`}).join("")}</div>`
-  :`<div class="sheet"><div class="empty">Nothing saved yet.</div></div>`;
+  :"");
 }
 function renderSchemeBar(){
  const keys=S.base.map(id=>byId[id]).filter(p=>p&&!isWhite(p)&&lch(p.h)[1]>6);
@@ -340,19 +346,21 @@ function renderSchemeBar(){
  $("keySel").innerHTML=keys.map(p=>`<option value="${esc(p.id)}">${esc(p.n)}</option>`).join("");
  if(keys[0])$("keySel").value=keys[0].id;
  $("keyWrap").style.display=(S.scheme&&S.scheme!=="auto"&&keys.length)?"":"none";
+ $("sizeSel").innerHTML=[5,6,7,8,9,10,11,12].map(k=>`<option value="${k}">${k} colours</option>`).join("");$("sizeSel").value=String(S.size||Math.min(12,Math.max(5,S.base.length||6)));
+ $("sizeWrap").style.display=$("keyWrap").style.display;
 }
 function applyScheme(scheme,keyId){
  if(scheme==="auto"){S.scheme="auto";render();return}
  const key=keyId||S.base.find(id=>byId[id]&&!isWhite(byId[id])&&lch(byId[id].h)[1]>6);
  if(!key){toast("Add a coloured paint first");$("schSel").value="auto";return}
- N={scheme,paint:key,hex:byId[key].h,white:S.base.some(id=>byId[id]&&isWhite(byId[id]))||!S.base.length};
+ N={scheme,paint:key,hex:byId[key].h,white:S.base.some(id=>byId[id]&&isWhite(byId[id]))||!S.base.length,size:S.size||S.base.length||6};
  const plan=planNew(),old=S.name,auto=!old||/( · |^Zorn$)/.test(old);
- S.base=plan.map(x=>x.p.id);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));S.scheme=scheme;
+ S.size=N.size;S.roles=Object.fromEntries(plan.filter(x=>x.role).map(x=>[x.p.id,x.role]));S.base=plan.map(x=>x.p.id);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));S.scheme=scheme;
  if(auto)S.name=`${SCHEMES.find(x=>x[0]===scheme)[1]} · ${byId[key].n}`;
  sel=null;persistDraft();render()}
 function render(){renderBase();renderSchemeBar();renderPins();renderDetail();
  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===view));
- $("savedTab").textContent=`Saved (${store.get().length})`;
+ $("savedTab").textContent=`Saved (${store.get().length+Object.keys(SETS).length})`;
  view==="wheel"?renderWheel():renderSaved()}
 
 /* ---------- add-paint picker ---------- */
@@ -370,7 +378,7 @@ const SETS={jb12:{name:"John Blanche Vol 1–2",ids:["The Darkness","Ivory White
 const setIds=k=>SETS[k].ids.map(n=>n.startsWith("#")?ideal(n):(PAINTS.find(p=>p.b==="Army Painter"&&p.n===n)||{}).id).filter(Boolean);
 const isSet=k=>!!SETS[k];
 const ZORN=["#C4952F","#C8232C","#252A33"];
-let N={scheme:"comp",hex:"#C8232C",paint:null,white:true};
+let N={scheme:"comp",hex:"#C8232C",paint:null,white:true,size:6};
 function rot(h,off,dl=0,cf=1){const [L,C,H]=lch(h),a=(H+off)*Math.PI/180;return lab2hex([Math.max(5,Math.min(95,L+dl)),C*cf*Math.cos(a),C*cf*Math.sin(a)])}
 function planNew(){
  const used=new Set(),pick=h=>{const m=OPAQUE.filter(p=>!used.has(p.id)&&!isWhite(p)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0];if(m.d>FAR)return {p:byId[ideal(h)],d:m.d,missing:true,alt:m};used.add(m.p.id);return m};
@@ -379,30 +387,48 @@ function planNew(){
  if(N.scheme==="zorn")out=ZORN.map(pick);
  else{
   const key=N.paint?{p:byId[N.paint],d:0}:pick(N.hex);used.add(key.p.id);out.push(key);
-  const base=key.p.h;
-  if(N.scheme==="mono")[[0,-28,.85],[0,-14,1],[0,16,.8]].forEach(([o,dl,cf])=>out.push(pick(rot(base,o,dl,cf))));
-  else SCHEMES.find(s=>s[0]===N.scheme)[2].filter(o=>o!==0).forEach(o=>out.push(pick(rot(base,o))));
+  const base=key.p.h,need=N.size||6;key.role="Base";
+  /* mini-painting roles, filled in priority order up to the chosen size.
+     Colour roles follow the scheme's hues; skin, metal, wash and leather come from the matching kind of bottle. */
+  const offs=N.scheme==="mono"?[0]:SCHEMES.find(x=>x[0]===N.scheme)[2],o2=offs[1]??0,o3=offs[2]??offs[1]??0,oS=offs[3]??offs[offs.length-1]??180;
+  const [bL,bC,bH]=lch(base),warm=bH<100||bH>320;
+  const from=(pool,h)=>{const c=pool.filter(p=>!used.has(p.id)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0];if(c)used.add(c.p.id);return c};
+  const METAL=PAINTS.filter(p=>p.t==="metallic"),WASH=PAINTS.filter(p=>p.t==="wash");
+  const ROLES=[
+   ["Secondary",()=>pick(N.scheme==="mono"?rot(base,0,-22,.9):rot(base,o2))],
+   ["Accent",()=>pick(N.scheme==="mono"?rot(base,0,20,.75):N.scheme==="comp"?rot(base,180,18,.8):rot(base,o3))],
+   ["Skin",()=>from(OPAQUE,"#C98E6E")],
+   ["Metal",()=>from(METAL,warm?"#B59155":"#969696")],
+   ["Spot colour",()=>pick(lab2hex((()=>{const h=(bH+(N.scheme==="mono"?180:oS)+360)%360*Math.PI/180,C=Math.max(55,bC*1.2);return [58,C*Math.cos(h),C*Math.sin(h)]})()))],
+   ["Shade wash",()=>from(WASH,rot(base,0,-38,.8))],
+   ["Base shade",()=>pick(rot(base,0,-20,.9))],
+   ["Base highlight",()=>pick(rot(base,0,20,.8))],
+   ["Secondary shade",()=>pick(rot(base,o2,-20,.9))],
+   ["Leather / wood",()=>from(OPAQUE,"#6B4630")],
+   ["Secondary highlight",()=>pick(rot(base,o2,20,.8))]];
+  for(const [role,f] of ROLES){if(out.length>=need)break;const m=f();if(!m||out.some(x=>x.p.id===m.p.id))continue;m.role=role;out.push(m)}
  }
- if(N.white||N.scheme==="zorn"){const w=OPAQUE.filter(isWhite).map(p=>({p,d:de("#F7F6F1",p.h)})).sort((a,b)=>a.d-b.d)[0];if(w)out.push({p:w.p,d:0,white:true})}
+ if(N.white||N.scheme==="zorn"){const w=OPAQUE.filter(isWhite).map(p=>({p,d:de("#F7F6F1",p.h)})).sort((a,b)=>a.d-b.d)[0];if(w&&!out.some(x=>x.p.id===w.p.id))out.push({p:w.p,d:0,white:true,role:"White (tints)"})}
  return out;
 }
 function renderNew(){
- $("nScheme").innerHTML=SCHEMES.map(([k,l])=>`<button data-sch="${k}" aria-pressed="${k===N.scheme}">${l}</button>`).join("")+Object.entries(SETS).map(([k,o])=>`<button data-sch="${k}" aria-pressed="${k===N.scheme}">${esc(o.name)}</button>`).join("");
+ $("nScheme").innerHTML=SCHEMES.map(([k,l])=>`<button data-sch="${k}" aria-pressed="${k===N.scheme}">${l}</button>`).join("");
+ $("nSize").innerHTML=[5,6,7,8,9,10,11,12].map(k=>`<button data-size="${k}" aria-pressed="${k===N.size}">${k}</button>`).join("");$("nSizeWrap").style.display=(N.scheme==="zorn"||isSet(N.scheme))?"none":"";
  $("nStartWrap").style.display=(N.scheme==="zorn"||isSet(N.scheme))?"none":"";$("nWhite").parentElement.style.display=isSet(N.scheme)?"none":"";
  const p=N.paint&&byId[N.paint];
  $("nSw").style.background=p?p.h:N.hex;$("nName").textContent=p?p.n:"Custom colour";$("nSub").textContent=p?p.s:N.hex+" · matched to your nearest bottle";
  $("nColor").value=(p?p.h:N.hex).toLowerCase();
  if(!$("nMini").childElementCount)$("nMini").innerHTML=OPAQUE.filter(x=>lch(x.h)[1]>10).sort((a,b)=>hueOrder(a)-hueOrder(b)).map(x=>`<button data-start="${esc(x.id)}" style="background:${x.h}" title="${esc(x.n)}" aria-label="${esc(x.n)}"></button>`).join("");
  $("nMini").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.start===N.paint));
- $("nPrev").innerHTML=planNew().map(({p,d,white,missing,alt,set})=>missing?`<span class="pchip miss"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>Not owned · closest is ${esc(alt.p.n)}${d?", ΔE "+d.toFixed(0):""}</small></span></span>`:`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${set?esc(p.s):white?"for tints":d<1?"start colour":"ΔE "+d.toFixed(1)+" from ideal"}</small></span></span>`).join("");
+ $("nPrev").innerHTML=planNew().map(({p,d,white,missing,alt,set,role})=>missing?`<span class="pchip miss"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${role?`<b class="role">${esc(role)}</b> · `:""}Not owned · closest is ${esc(alt.p.n)}${d?", ΔE "+d.toFixed(0):""}</small></span></span>`:`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${role?`<b class="role">${esc(role)}</b> · `:""}${set?esc(p.s):white?esc(p.s):d<1?esc(p.s):"ΔE "+d.toFixed(1)}</small></span></span>`).join("");
 }
-function createNew(){const plan=planNew();S={base:plan.map(x=>x.p.id),pins:[],
- scheme:(N.scheme==="zorn"||isSet(N.scheme))?"auto":N.scheme,name:isSet(N.scheme)?SETS[N.scheme].name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
+function createNew(){const plan=planNew();S={roles:Object.fromEntries(plan.filter(x=>x.role).map(x=>[x.p.id,x.role])),base:plan.map(x=>x.p.id),pins:[],
+ size:N.size,scheme:(N.scheme==="zorn"||isSet(N.scheme))?"auto":N.scheme,name:isSet(N.scheme)?SETS[N.scheme].name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
  sel=null;view="wheel";$("newDlg").close();persistDraft();render()}
 
 /* ---------- share / save ---------- */
-function encode(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.name,b:S.base,p:S.pins,s:S.scheme}))))}
-function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {scheme:o.s||"auto",name:o.n||"",base:(o.b||[]).map(reg).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[reg(id)]))}}catch(e){return null}}
+function encode(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.name,b:S.base,p:S.pins,s:S.scheme,z:S.size,r:S.roles||{}}))))}
+function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {roles:o.r||{},size:o.z||0,scheme:o.s||"auto",name:o.n||"",base:(o.b||[]).map(reg).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[reg(id)]))}}catch(e){return null}}
 function toast(t){const el=$("toast");el.textContent=t;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),2000)}
 function persistDraft(){try{localStorage.setItem("paletteDraft",encode())}catch(e){}}
 
@@ -415,16 +441,18 @@ document.addEventListener("click",e=>{
  if(t.dataset.r){choose(t);return}
  if(t.id==="addBtn"){renderPicker();$("picker").showModal();return}
  if(t.id==="newBtn"||t.dataset.opennew){renderNew();$("newDlg").showModal();$("nCreate").focus();return}
+ if(t.dataset.size){N.size=+t.dataset.size;renderNew();return}
  if(t.dataset.sch){N.scheme=t.dataset.sch;renderNew();return}
  if(t.dataset.start){N.paint=t.dataset.start;renderNew();return}
- if(t.dataset.swap){const id=t.dataset.swap,a=byId[id].alt;S.base=S.base.map(x=>x===id?a:x);S.pins=S.pins.map(r=>r.map(([i,w])=>[i===id?a:i,w]));S.scheme="auto";sel=null;persistDraft();render();return}
+ if(t.dataset.swap){const id=t.dataset.swap,a=byId[id].alt;S.base=S.base.map(x=>x===id?a:x);if(S.roles&&S.roles[id]){S.roles[a]=S.roles[id];delete S.roles[id]}S.pins=S.pins.map(r=>r.map(([i,w])=>[i===id?a:i,w]));S.scheme="auto";sel=null;persistDraft();render();return}
  if(t.dataset.rm){S.scheme="auto";S.base=S.base.filter(id=>id!==t.dataset.rm);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));sel=null;persistDraft();render();return}
  if(t.dataset.v){view=t.dataset.v;render();return}
  if(t.dataset.f){pFilter=t.dataset.f;renderPicker();return}
  if(t.dataset.pick){S.scheme="auto";const id=t.dataset.pick;S.base=S.base.includes(id)?S.base.filter(x=>x!==id):S.base.concat(id);t.setAttribute("aria-pressed",S.base.includes(id));persistDraft();return}
  if(t.dataset.pin!==undefined){const r=S.pins[+t.dataset.pin];sel={r,key:recKey(r)};render();return}
  if(t.id==="pinBtn"){const i=S.pins.findIndex(x=>recKey(x)===sel.key);if(i>=0)S.pins.splice(i,1);else S.pins.push(sel.r);persistDraft();renderPins();renderDetail();return}
- if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={scheme:s.scheme||"auto",name:s.name,base:s.base.map(reg).filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[reg(id)]))};sel=null;view="wheel";persistDraft();render();return}
+ if(t.dataset.loadset){const k=t.dataset.loadset,ids=setIds(k);S={name:SETS[k].name,base:ids,pins:[],scheme:"auto",roles:{}};sel=null;view="wheel";persistDraft();render();return}
+ if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={roles:s.roles||{},size:s.size||0,scheme:s.scheme||"auto",name:s.name,base:s.base.map(reg).filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[reg(id)]))};sel=null;view="wheel";persistDraft();render();return}
  if(t.dataset.del!==undefined){const L=store.get(),s=L[+t.dataset.del];if(!confirm(`Delete "${s.name||"Untitled"}"?`))return;L.splice(+t.dataset.del,1);store.set(L);render();return}
 });
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&(e.target.dataset.r||e.target.dataset.paint)){e.preventDefault();e.target.dispatchEvent(new MouseEvent("click",{bubbles:true}))}});
@@ -437,10 +465,11 @@ $("nWhite").onchange=e=>{N.white=e.target.checked;renderNew()};
 $("nCreate").onclick=createNew;
 $("schSel").onchange=e=>applyScheme(e.target.value);
 $("keySel").onchange=e=>applyScheme(S.scheme,e.target.value);
-$("nBlank").onclick=()=>{S={name:"",base:[],pins:[],scheme:"auto"};sel=null;view="wheel";$("newDlg").close();persistDraft();render()};
+$("sizeSel").onchange=e=>{S.size=+e.target.value;applyScheme(S.scheme,$("keySel").value)};
+$("nBlank").onclick=()=>{S={name:"",base:[],pins:[],scheme:"auto",roles:{}};sel=null;view="wheel";$("newDlg").close();persistDraft();render()};
 $("pname").oninput=e=>{S.name=e.target.value;persistDraft();const h=document.querySelector(".sheet h3");if(h)h.textContent=S.name||"Untitled palette"};
 $("saveBtn").onclick=()=>{if(!S.base.length){toast("Add some paints first");return}
- const L=store.get(),name=S.name.trim()||"Untitled palette",i=L.findIndex(x=>x.name===name),rec={name,base:S.base,pins:S.pins,scheme:S.scheme,at:Date.now()};
+ const L=store.get(),name=S.name.trim()||"Untitled palette",i=L.findIndex(x=>x.name===name),rec={name,base:S.base,pins:S.pins,scheme:S.scheme,size:S.size,roles:S.roles||{},at:Date.now()};
  if(i>=0)L[i]=rec;else L.unshift(rec);toast(store.set(L)?(i>=0?"Updated":"Saved"):"Couldn't save here; use Copy link");S.name=name;render()};
 $("shareBtn").onclick=async()=>{const url=location.href.split("#")[0]+"#p="+encode();
  try{await navigator.clipboard.writeText(url);toast("Link copied")}catch(e){prompt("Copy this link",url)}};
