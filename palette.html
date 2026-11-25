@@ -77,6 +77,8 @@ svg.vals text{font:500 15px Archivo,sans-serif;fill:#4a4740}
 .sv{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
 .sv .strip{display:flex;height:34px;border-radius:6px;overflow:hidden;flex:0 0 140px}
 .sv .strip i{flex:1}
+.sv.sync{display:block}.sv.sync:not(details){display:flex}
+.sv.sync summary{cursor:pointer}
 .sv .meta{flex:1}.sv .meta small{color:var(--mute);display:block}
 /* dialogs */
 dialog{border:0;border-radius:16px;padding:0;width:min(760px,94vw);max-height:90vh;background:var(--bg);color:var(--ink);box-shadow:0 20px 60px #0008}
@@ -238,8 +240,26 @@ function parts(ws){/* weights -> small whole-number parts */
 /* ---------- state ---------- */
 let S={name:"",base:[],pins:[],scheme:"auto"};
 let sel=null,view="wheel",pFilter="mix";
-const store={get(){try{return JSON.parse(localStorage.getItem("paintPalettes")||"[]")}catch(e){return []}},
- set(v){try{localStorage.setItem("paintPalettes",JSON.stringify(v));return true}catch(e){return false}}};
+/* saved palettes: kept in this browser, and mirrored to your own server when sync is connected */
+const SYNC={get(){try{return JSON.parse(localStorage.getItem("paletteSync")||"null")}catch(e){return null}},
+ set(v){try{v?localStorage.setItem("paletteSync",JSON.stringify(v)):localStorage.removeItem("paletteSync")}catch(e){}}};
+let syncState={ok:null,at:null,msg:""};
+async function api(method,body){const c=SYNC.get();if(!c)throw new Error("Not connected");
+ const r=await fetch(c.url,{method,headers:{"X-Paint-Key":c.key,...(body?{"Content-Type":"application/json"}:{})},body:body?JSON.stringify(body):undefined,cache:"no-store"});
+ const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||("HTTP "+r.status));return j}
+function mergeLists(a,b){const m=new Map();for(const p of a.concat(b)){const o=m.get(p.name);if(!o||(p.at||0)>(o.at||0))m.set(p.name,p)}return [...m.values()].sort((x,y)=>(y.at||0)-(x.at||0))}
+async function pushRemote(L){if(!SYNC.get())return;try{await api("PUT",L);syncState={ok:true,at:Date.now(),msg:""}}catch(e){syncState={ok:false,at:syncState.at,msg:e.message};toast("Sync failed: "+e.message)}if(view==="saved")renderSaved()}
+async function pullRemote(quiet){if(!SYNC.get())return;try{const R=await api("GET");const local=rawList();
+  const merged=mergeLists(Array.isArray(R)?R:[],local);localStorage.setItem("paintPalettes",JSON.stringify(merged));
+  if(JSON.stringify(merged)!==JSON.stringify(R))await api("PUT",merged);
+  syncState={ok:true,at:Date.now(),msg:""};if(!quiet)toast("Synced")}catch(e){syncState={ok:false,at:syncState.at,msg:e.message};if(!quiet)toast("Sync failed: "+e.message)}
+ if(view==="saved")renderSaved();$("savedTab").textContent=`Saved (${store.get().length+Object.keys(SETS).length})`}
+/* deletes are kept as dated tombstones so another device's copy can't bring a deleted palette back */
+const rawList=()=>{try{return JSON.parse(localStorage.getItem("paintPalettes")||"[]")}catch(e){return []}};
+const store={get(){return rawList().filter(p=>!p.deleted)},
+ set(v){const now=Date.now(),keep=new Set(v.map(p=>p.name)),old=rawList();
+  const tomb=old.filter(p=>!keep.has(p.name)).map(p=>p.deleted?p:{name:p.name,base:[],deleted:true,at:now});
+  const all=v.concat(tomb);try{localStorage.setItem("paintPalettes",JSON.stringify(all))}catch(e){return false}pushRemote(all);return true}};
 const recHex=r=>kmMix(r.filter(([id])=>byId[id]).map(([id,w])=>[byId[id].h,w]));
 const recKey=r=>r.map(([i,w])=>i+"*"+w).sort().join("+");
 const OPAQUE=PAINTS.filter(p=>p.t==="opaque");
@@ -339,7 +359,13 @@ function renderSaved(){
  const L=store.get();
  const built=Object.entries(SETS).map(([k,o])=>{const ids=setIds(k),cols=ids.map(id=>byId[id].h);
   return `<div class="sv"><div class="strip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</div><div class="meta"><b>${esc(o.name)}</b><small>${ids.length} paints · built in</small></div><button class="btn" data-loadset="${k}">Open</button></div>`}).join("");
- $("view").innerHTML=`<div class="saved">${built}</div>`+(L.length?`<div class="saved" style="margin-top:10px">${L.map((s,i)=>{const cols=s.base.map(id=>byId[reg(id)]?.h).filter(Boolean).concat(s.pins.map(recHex));
+ const c=SYNC.get();
+ const sync=c?`<div class="sv sync"><div class="meta"><b>Synced across devices</b><small>${esc(new URL(c.url).host)} · ${syncState.ok===false?`<span style="color:#d9534f">${esc(syncState.msg)}</span>`:syncState.at?"last synced "+new Date(syncState.at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"connecting…"}</small></div><button class="btn" data-sync="now">Sync now</button><button class="link" data-sync="off">Disconnect</button></div>`
+  :`<details class="sv sync"><summary><b>Sync across devices</b> <small class="muted">· off, palettes stay in this browser</small></summary>
+   <div style="display:grid;gap:8px;margin-top:10px"><input type="text" id="syncUrl" placeholder="https://yourdomain.com/paint-api/palettes.php" value="${esc(localStorage.getItem("paletteSyncUrl")||"")}" aria-label="Sync address">
+   <input type="password" id="syncKey" placeholder="Sync key" aria-label="Sync key" autocomplete="off">
+   <div class="row"><button class="btn pri" data-sync="on">Connect</button></div></div></details>`;
+ $("view").innerHTML=sync+`<div class="saved" style="margin-top:10px">${built}</div>`+(L.length?`<div class="saved" style="margin-top:10px">${L.map((s,i)=>{const cols=s.base.map(id=>byId[reg(id)]?.h).filter(Boolean).concat(s.pins.map(recHex));
   return `<div class="sv"><div class="strip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</div><div class="meta"><b>${esc(s.name||"Untitled")}</b><small>${s.base.length} paints · ${s.pins.length} pinned</small></div><button class="btn" data-load="${i}">Open</button><button class="link" data-del="${i}">Delete</button></div>`}).join("")}</div>`
   :"");
 }
@@ -442,7 +468,7 @@ function persistDraft(){try{localStorage.setItem("paletteDraft",encode())}catch(
 
 /* ---------- events ---------- */
 function choose(t){const r=JSON.parse(t.dataset.r);sel={r,key:recKey(r)};renderWheel();renderDetail();renderPins()}
-document.addEventListener("click",e=>{
+document.addEventListener("click",async e=>{
  const t=e.target.closest("button,[data-r],[data-paint]");if(!t)return;
  if(t.dataset.paint){sel={paint:t.dataset.paint};renderWheel();renderDetail();renderPins();return}
  if(t.dataset.addbase){if(!S.base.includes(t.dataset.addbase)){S.base.push(t.dataset.addbase);S.scheme="auto"}persistDraft();render();return}
@@ -459,6 +485,13 @@ document.addEventListener("click",e=>{
  if(t.dataset.pick){S.scheme="auto";const id=t.dataset.pick;S.base=S.base.includes(id)?S.base.filter(x=>x!==id):S.base.concat(id);t.setAttribute("aria-pressed",S.base.includes(id));persistDraft();return}
  if(t.dataset.pin!==undefined){const r=S.pins[+t.dataset.pin];sel={r,key:recKey(r)};render();return}
  if(t.id==="pinBtn"){const i=S.pins.findIndex(x=>recKey(x)===sel.key);if(i>=0)S.pins.splice(i,1);else S.pins.push(sel.r);persistDraft();renderPins();renderDetail();return}
+ if(t.dataset.sync==="on"){const url=$("syncUrl").value.trim(),key=$("syncKey").value;
+  if(!/^https:\/\//.test(url)){toast("Use the https:// address of the script");return}if(key.length<16){toast("Key looks too short");return}
+  try{localStorage.setItem("paletteSyncUrl",url)}catch(e){}SYNC.set({url,key});
+  try{await api("GET")}catch(e){SYNC.set(null);toast("Couldn't connect: "+e.message);return}
+  await pullRemote();return}
+ if(t.dataset.sync==="now"){pullRemote();return}
+ if(t.dataset.sync==="off"){SYNC.set(null);syncState={ok:null,at:null,msg:""};toast("Disconnected; palettes stay in this browser");renderSaved();return}
  if(t.dataset.loadset){const k=t.dataset.loadset,ids=setIds(k);S={name:SETS[k].name,base:ids,pins:[],scheme:"auto",roles:{}};sel=null;view="wheel";persistDraft();render();return}
  if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={roles:s.roles||{},size:s.size||0,scheme:s.scheme||"auto",name:s.name,base:s.base.map(reg).filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[reg(id)]))};sel=null;view="wheel";persistDraft();render();return}
  if(t.dataset.del!==undefined){const L=store.get(),s=L[+t.dataset.del];if(!confirm(`Delete "${s.name||"Untitled"}"?`))return;L.splice(+t.dataset.del,1);store.set(L);render();return}
@@ -483,12 +516,13 @@ $("saveBtn").onclick=()=>{if(!S.base.length){toast("Add some paints first");retu
 $("shareBtn").onclick=async()=>{const url=location.href.split("#")[0]+"#p="+encode();
  try{await navigator.clipboard.writeText(url);toast("Link copied")}catch(e){prompt("Copy this link",url)}};
 
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)pullRemote(true)});
 /* ---------- boot ---------- */
 (function(){const m=location.hash.match(/#p=(.+)/);let s=m&&decode(m[1]);
  if(!s){try{const d=localStorage.getItem("paletteDraft");s=d&&decode(d)}catch(e){}}
  /* a shared link opens straight to its palette; otherwise start at New palette, with the last draft behind it */
  if(s&&s.base.length)S=s;
- render();
+ render();pullRemote(true);
  if(!m){renderNew();$("newDlg").showModal();$("nCreate").focus()}})();
 </script>
 </body></html>
