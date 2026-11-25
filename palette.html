@@ -5,7 +5,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Archivo:wght@400;600&display=swap" rel="stylesheet">
 <style>
 /* VOICE: same painter's bench as the rack page; few words, the colour does the talking
-   IDEA: a hand-painted Zorn chart on card stock, brushed wedges with ragged edges, built only from bottles on the wall */
+   IDEA: a Zorn-style mixing chart on card, each wedge in the same textured-plasticard finish as the rack swatches */
 :root{color-scheme:light dark;--bg:light-dark(#ecebe6,#121212);--card:light-dark(#f6f5f1,#1a1a1b);--ink:light-dark(#1b1b1c,#ecebe6);--mute:light-dark(#5d5b55,#a19e96);--acc:#c79a3c;--line:light-dark(#cfccc4,#2c2c2e);--paper:#f4f2ec}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip}
@@ -42,7 +42,8 @@ input[type=search],input[type=text]{font:16px Archivo,sans-serif;min-height:42px
 .sheet{background:var(--paper) radial-gradient(120% 90% at 50% 40%,#fbfaf6,#ebe8df);color:#3a3833;border-radius:6px;padding:clamp(12px,3vw,28px);box-shadow:0 1px 0 #fff8 inset,0 14px 34px #0004}
 .sheet h3{text-align:center;font:600 clamp(22px,3vw,30px) Archivo,sans-serif;color:#4a4740}
 svg.wheel{display:block;width:100%;max-width:620px;margin:0 auto;overflow:visible}
-svg.wheel [data-r]{cursor:pointer}
+svg.wheel [data-r]{cursor:pointer;stroke:var(--paper);stroke-width:1.5}
+svg.vals rect{rx:3px}
 svg.wheel text{font:500 13px Archivo,sans-serif;fill:#6d6a63}
 svg.vals{display:block;width:100%;max-width:520px;margin:6px auto 0;overflow:visible}
 svg.vals text{font:500 15px Archivo,sans-serif;fill:#4a4740}
@@ -96,31 +97,31 @@ dialog::backdrop{background:#0008}
 .toast.on{opacity:1}
 @media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}}
 </style></head><body>
-<!-- shared brush filters: ragged edges plus streaks along each wedge -->
+<!-- same textured-plasticard relief as the rack swatches -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
- <filter id="br0" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
-  <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="3" result="n"/>
-  <feDisplacementMap in="SourceGraphic" in2="n" scale="14" xChannelSelector="R" yChannelSelector="G" result="d"/>
-  <feTurbulence type="fractalNoise" baseFrequency="0.16 0.012" numOctaves="2" seed="11" result="s"/>
-  <feDiffuseLighting in="s" surfaceScale="1.6" diffuseConstant="1" lighting-color="#fff" result="L"><feDistantLight azimuth="235" elevation="58"/></feDiffuseLighting>
-  <feComposite in="L" in2="d" operator="in" result="Lm"/>
-  <feBlend in="Lm" in2="d" mode="soft-light"/>
+ <filter id="br0" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="4" seed="7" result="n"/>
+  <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+  <feDiffuseLighting in="g" lighting-color="#fff" surfaceScale="3.2" diffuseConstant="1.05" result="L"><feDistantLight azimuth="225" elevation="32"/></feDiffuseLighting>
+  <feColorMatrix in="L" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 .5" result="La"/>
+  <feComposite in="La" in2="SourceGraphic" operator="in" result="Lm"/>
+  <feBlend in="Lm" in2="SourceGraphic" mode="soft-light"/>
  </filter>
- <filter id="br1" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
-  <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="21" result="n"/>
-  <feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G" result="d"/>
-  <feTurbulence type="fractalNoise" baseFrequency="0.14 0.014" numOctaves="2" seed="5" result="s"/>
-  <feDiffuseLighting in="s" surfaceScale="1.5" diffuseConstant="1" lighting-color="#fff" result="L"><feDistantLight azimuth="235" elevation="58"/></feDiffuseLighting>
-  <feComposite in="L" in2="d" operator="in" result="Lm"/>
-  <feBlend in="Lm" in2="d" mode="soft-light"/>
+ <filter id="br1" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="4" seed="7" result="n"/>
+  <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+  <feDiffuseLighting in="g" lighting-color="#fff" surfaceScale="3.2" diffuseConstant="1.05" result="L"><feDistantLight azimuth="225" elevation="32"/></feDiffuseLighting>
+  <feColorMatrix in="L" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 .5" result="La"/>
+  <feComposite in="La" in2="SourceGraphic" operator="in" result="Lm"/>
+  <feBlend in="Lm" in2="SourceGraphic" mode="soft-light"/>
  </filter>
- <filter id="brv" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
-  <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="8" result="n"/>
-  <feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G" result="d"/>
-  <feTurbulence type="fractalNoise" baseFrequency="0.012 0.15" numOctaves="2" seed="2" result="s"/>
-  <feDiffuseLighting in="s" surfaceScale="1.5" diffuseConstant="1" lighting-color="#fff" result="L"><feDistantLight azimuth="235" elevation="58"/></feDiffuseLighting>
-  <feComposite in="L" in2="d" operator="in" result="Lm"/>
-  <feBlend in="Lm" in2="d" mode="soft-light"/>
+ <filter id="brv" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="4" seed="7" result="n"/>
+  <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+  <feDiffuseLighting in="g" lighting-color="#fff" surfaceScale="3.2" diffuseConstant="1.05" result="L"><feDistantLight azimuth="225" elevation="32"/></feDiffuseLighting>
+  <feColorMatrix in="L" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 .5" result="La"/>
+  <feComposite in="La" in2="SourceGraphic" operator="in" result="Lm"/>
+  <feBlend in="Lm" in2="SourceGraphic" mode="soft-light"/>
  </filter>
 </defs></svg>
 
@@ -259,9 +260,9 @@ function renderBase(){
 function renderWheel(){
  const W=wheel();
  if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty">Add at least two paints.</div></div>`;return}
- const n=W.rings.length,cx=340,cy=330,R=[118,182,250],half=Math.PI/n,ov=.012;
+ const n=W.rings.length,cx=340,cy=330,R=[118,182,250],half=Math.PI/n,ov=0;
  let g="",labels="",mark="";
- /* paint outer ring first as full slices, inner rings painted over them, like brushing a chart */
+ /* outer ring first as full slices, inner rings layered over them */
  [[2,R[2],"br0"],[1,R[1],"br1"],[0,R[0],"br0"]].forEach(([k,r,f])=>{
   W.rings.forEach((ring,i)=>{const rec=ring[2-k];if(!rec)return;
    const rr=W.white?r:(k===2?R[2]:0);if(!rr)return;
