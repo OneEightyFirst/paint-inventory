@@ -37,6 +37,11 @@ input[type=search],input[type=text]{font:16px Archivo,sans-serif;min-height:42px
 .pchip small{color:var(--mute);display:block;font-size:11px;line-height:1.1}
 .pchip .x{border:0;background:none;width:28px;height:28px;border-radius:50%;color:var(--mute);font-size:18px;line-height:1}
 .pchip .x:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}
+.pchip.miss{border-style:dashed;border-color:var(--acc)}
+.pchip.miss .dot{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--acc)}
+.pchip.miss small{color:var(--acc)}
+.swap{border:0;background:color-mix(in srgb,var(--acc) 20%,transparent);color:var(--ink);border-radius:999px;font-size:12px;padding:4px 10px;white-space:nowrap}
+.tag{font-size:11px;font-weight:600;color:var(--acc);border:1px solid var(--acc);border-radius:999px;padding:0 6px;margin-left:4px;white-space:nowrap}
 .add{min-height:40px;border-radius:999px;border:1px dashed var(--mute);background:transparent;padding:0 16px}
 .wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}
 /* the painted sheet */
@@ -230,6 +235,10 @@ const store={get(){try{return JSON.parse(localStorage.getItem("paintPalettes")||
 const recHex=r=>kmMix(r.filter(([id])=>byId[id]).map(([id,w])=>[byId[id].h,w]));
 const recKey=r=>r.map(([i,w])=>i+"*"+w).sort().join("+");
 const OPAQUE=PAINTS.filter(p=>p.t==="opaque");
+/* a colour the scheme wants but no bottle comes close to: kept as a marked "not owned" paint */
+const FAR=10;
+function ideal(h){h=h.toUpperCase();const id="ideal:"+h;if(!byId[id]){const c=nearest(h,1,OPAQUE)[0];byId[id]={id,n:nameFor(h),b:"Not owned",l:"",t:"opaque",h,s:"Not owned",missing:true,alt:c.p.id,altD:c.d}}return id}
+const reg=id=>{if(typeof id==="string"&&id.startsWith("ideal:"))ideal(id.slice(6));return id};
 const isWhite=p=>{const [L,C]=lch(p.h);return L>88&&C<12};
 const hueOrder=p=>{const [L,C,H]=lch(p.h);return C<10?1000+(100-L):H};
 function nearest(h,n=3,pool=PAINTS){return pool.map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d).slice(0,n)}
@@ -261,21 +270,28 @@ function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1
 
 /* ---------- rendering ---------- */
 function renderBase(){
- $("baseStrip").innerHTML=S.base.map(id=>{const p=byId[id];if(!p)return"";return `<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${esc(p.s)}</small></span><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}).join("")+`<button class="add" id="addBtn">+ Add paint</button>`;
+ $("baseStrip").innerHTML=S.base.map(id=>{const p=byId[id];if(!p)return"";
+  if(p.missing){const a=byId[p.alt];return `<span class="pchip miss" title="Ideal colour for this scheme; nothing in your rack is within ΔE ${FAR}"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>Not owned · ${p.h}</small></span><button class="swap" data-swap="${esc(id)}" title="Use ${esc(a.n)} instead (ΔE ${p.altD.toFixed(1)})">Use ${esc(a.n)}</button><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}
+  return `<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${esc(p.s)}</small></span><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}).join("")+`<button class="add" id="addBtn">+ Add paint</button>`;
 }
 function renderWheel(){
  const W=wheel();
  if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty">Add at least two paints.</div></div>`;return}
  const n=W.rings.length,cx=340,cy=330,R=[118,182,250],half=Math.PI/n,ov=0;
- let g="",labels="",mark="";
+ let g="",labels="",mark="",over=[];
  /* outer ring first as full slices, inner rings layered over them */
  [[2,R[2],"br0"],[1,R[1],"br1"],[0,R[0],"br0"]].forEach(([k,r,f])=>{
   W.rings.forEach((ring,i)=>{const rec=ring[2-k];if(!rec)return;
    const rr=W.white?r:(k===2?R[2]:0);if(!rr)return;
    const h=recHex(rec),deg=i/n*360;
-   g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})"><path d="${slice(cx,cy,rr,-half-ov,half+ov)}" fill="${h}" filter="url(#${f})" data-r='${esc(JSON.stringify(rec))}' tabindex="0" aria-label="${esc(nameFor(h))}"><title>${esc(nameFor(h))}</title></path></g>`;
+   const miss=rec.some(([id])=>byId[id]&&byId[id].missing);
+   g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})"><path d="${slice(cx,cy,rr,-half-ov,half+ov)}" fill="${h}" filter="url(#${f})" data-r='${esc(JSON.stringify(rec))}' tabindex="0" aria-label="${esc(nameFor(h))}${miss?", uses a paint you don't own":""}"><title>${esc(nameFor(h))}${miss?" (uses a paint you don't own)":""}</title></path></g>`;
+   if(miss)over.push({deg,rr,k});
    if(sel&&sel.key===recKey(rec)){const rm=k===2?(R[1]+R[2])/2:k===1?(R[0]+R[1])/2:(52+R[0])/2,[mx,my]=pt(cx,cy,W.white?rm:(R[2]*.7),i/n*2*Math.PI);mark=`<circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#fff" stroke-width="3"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#111" stroke-width="1.2"/>`}
   })});
+ const inner={2:R[1],1:R[0],0:W.white?52:0};
+ over.forEach(({deg,rr,k})=>{const r0=inner[k]+5,r1=rr-5,a0=-half+.03,a1=half-.03,[x1,y1]=pt(cx,cy,r1,a0),[x2,y2]=pt(cx,cy,r1,a1),[x3,y3]=pt(cx,cy,r0,a1),[x4,y4]=pt(cx,cy,r0,a0);
+  g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})" pointer-events="none"><path d="M${x1} ${y1}A${r1} ${r1} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r0} ${r0} 0 0 0 ${x4} ${y4}Z" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.6" stroke-dasharray="4 4"/></g>`});
  /* hub: everything mixed */
  const hub=recHex(W.all);
  g+=`<circle cx="${cx}" cy="${cy}" r="${W.white?52:70}" fill="${hub}" filter="url(#br1)" data-r='${esc(JSON.stringify(W.all))}' tabindex="0" aria-label="All paints mixed"><title>Everything mixed</title></circle>`;
@@ -288,14 +304,15 @@ function renderWheel(){
  if(W.values){const bw=92,gap=10,x0=(520-5*bw-4*gap)/2;
   vals=`<svg class="vals" viewBox="0 0 520 120" role="group" aria-label="Value scale">`+W.values.map((r,i)=>{const x=x0+i*(bw+gap),h=recHex(r);
    return `<rect x="${x}" y="6" width="${bw}" height="78" fill="${h}" filter="url(#brv)" data-r='${esc(JSON.stringify(r))}' tabindex="0" aria-label="Value ${i+1}"></rect>${sel&&sel.key===recKey(r)?`<circle cx="${x+bw/2}" cy="45" r="9" fill="none" stroke="#fff" stroke-width="3"/>`:""}<text x="${x+bw/2}" y="110" text-anchor="middle">${i+1}</text>`}).join("")+`</svg>`}
- $("view").innerHTML=`<div class="sheet"><h3>${esc(S.name||"Untitled palette")}</h3><svg class="wheel" viewBox="0 0 680 660" role="group" aria-label="Mixing wheel">${g}${mark}${labels}</svg>${vals}</div>`;
+ const anyMiss=S.base.some(id=>byId[id]&&byId[id].missing);
+ $("view").innerHTML=`<div class="sheet"><h3>${esc(S.name||"Untitled palette")}</h3>${anyMiss?`<p style="text-align:center;font-size:13px;color:#77746d;margin:2px 0 0">Dashed wedges use a colour you don't own</p>`:""}<svg class="wheel" viewBox="0 0 680 660" role="group" aria-label="Mixing wheel">${g}${mark}${labels}</svg>${vals}</div>`;
 }
 function renderDetail(){
  const d=$("detail");
  if(!sel){d.innerHTML=`<p class="muted" style="margin:0">Tap a mix for its recipe.</p>`;return}
  const r=sel.r,h=recHex(r),pp=parts(r.map(x=>x[1])),pinned=S.pins.some(x=>recKey(x)===sel.key),near=nearest(h);
  d.innerHTML=`<div class="big" style="background:${h}"></div><h2>${esc(nameFor(h))}</h2><div class="muted">${h}</div>
-  <div class="lbl">Recipe</div><ul class="recipe">${r.map(([id],i)=>{const p=byId[id];return `<li><b>${pp[i]} part${pp[i]>1?"s":""}</b><span class="dot" style="background:${p.h}"></span>${esc(p.n)}</li>`}).join("")}</ul>
+  <div class="lbl">Recipe</div><ul class="recipe">${r.map(([id],i)=>{const p=byId[id];return `<li><b>${pp[i]} part${pp[i]>1?"s":""}</b><span class="dot" style="background:${p.h}"></span>${esc(p.n)}${p.missing?`<span class="tag">not owned</span>`:""}</li>`}).join("")}</ul>
   <div class="lbl">Closest bottles</div><div class="near">${near.map(({p,d})=>`<div><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<br><small class="muted">${esc(p.s)}</small></span><span>${d<2?"≈ same":"ΔE "+d.toFixed(1)}</span></div>`).join("")}</div>
   <button class="btn ${pinned?"":"pri"}" id="pinBtn">${pinned?"Unpin":"Pin"}</button>`;
 }
@@ -305,7 +322,7 @@ function renderPins(){
 }
 function renderSaved(){
  const L=store.get();
- $("view").innerHTML=L.length?`<div class="saved">${L.map((s,i)=>{const cols=s.base.map(id=>byId[id]?.h).filter(Boolean).concat(s.pins.map(recHex));
+ $("view").innerHTML=L.length?`<div class="saved">${L.map((s,i)=>{const cols=s.base.map(id=>byId[reg(id)]?.h).filter(Boolean).concat(s.pins.map(recHex));
   return `<div class="sv"><div class="strip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</div><div class="meta"><b>${esc(s.name||"Untitled")}</b><small>${s.base.length} paints · ${s.pins.length} pinned</small></div><button class="btn" data-load="${i}">Open</button><button class="link" data-del="${i}">Delete</button></div>`}).join("")}</div>`
   :`<div class="sheet"><div class="empty">Nothing saved yet.</div></div>`;
 }
@@ -346,7 +363,7 @@ const ZORN=["#C4952F","#C8232C","#252A33"];
 let N={scheme:"comp",hex:"#C8232C",paint:null,white:true};
 function rot(h,off,dl=0,cf=1){const [L,C,H]=lch(h),a=(H+off)*Math.PI/180;return lab2hex([Math.max(5,Math.min(95,L+dl)),C*cf*Math.cos(a),C*cf*Math.sin(a)])}
 function planNew(){
- const used=new Set(),pick=h=>{const m=OPAQUE.filter(p=>!used.has(p.id)&&!isWhite(p)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0];used.add(m.p.id);return m};
+ const used=new Set(),pick=h=>{const m=OPAQUE.filter(p=>!used.has(p.id)&&!isWhite(p)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0];if(m.d>FAR)return {p:byId[ideal(h)],d:m.d,missing:true,alt:m};used.add(m.p.id);return m};
  let out=[];
  if(N.scheme==="zorn")out=ZORN.map(pick);
  else{
@@ -366,7 +383,7 @@ function renderNew(){
  $("nColor").value=(p?p.h:N.hex).toLowerCase();
  if(!$("nMini").childElementCount)$("nMini").innerHTML=OPAQUE.filter(x=>lch(x.h)[1]>10).sort((a,b)=>hueOrder(a)-hueOrder(b)).map(x=>`<button data-start="${esc(x.id)}" style="background:${x.h}" title="${esc(x.n)}" aria-label="${esc(x.n)}"></button>`).join("");
  $("nMini").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.start===N.paint));
- $("nPrev").innerHTML=planNew().map(({p,d,white})=>`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${white?"for tints":d<1?"start colour":"ΔE "+d.toFixed(1)+" from ideal"}</small></span></span>`).join("");
+ $("nPrev").innerHTML=planNew().map(({p,d,white,missing,alt})=>missing?`<span class="pchip miss"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>Not owned · closest is ${esc(alt.p.n)}, ΔE ${d.toFixed(0)}</small></span></span>`:`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${white?"for tints":d<1?"start colour":"ΔE "+d.toFixed(1)+" from ideal"}</small></span></span>`).join("");
 }
 function createNew(){const plan=planNew();S={base:plan.map(x=>x.p.id),pins:[],
  scheme:N.scheme==="zorn"?"auto":N.scheme,name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
@@ -374,7 +391,7 @@ function createNew(){const plan=planNew();S={base:plan.map(x=>x.p.id),pins:[],
 
 /* ---------- share / save ---------- */
 function encode(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.name,b:S.base,p:S.pins,s:S.scheme}))))}
-function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {scheme:o.s||"auto",name:o.n||"",base:(o.b||[]).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[id]))}}catch(e){return null}}
+function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {scheme:o.s||"auto",name:o.n||"",base:(o.b||[]).map(reg).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[reg(id)]))}}catch(e){return null}}
 function toast(t){const el=$("toast");el.textContent=t;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),2000)}
 function persistDraft(){try{localStorage.setItem("paletteDraft",encode())}catch(e){}}
 
@@ -387,13 +404,14 @@ document.addEventListener("click",e=>{
  if(t.id==="newBtn"){renderNew();$("newDlg").showModal();return}
  if(t.dataset.sch){N.scheme=t.dataset.sch;renderNew();return}
  if(t.dataset.start){N.paint=t.dataset.start;renderNew();return}
+ if(t.dataset.swap){const id=t.dataset.swap,a=byId[id].alt;S.base=S.base.map(x=>x===id?a:x);S.pins=S.pins.map(r=>r.map(([i,w])=>[i===id?a:i,w]));S.scheme="auto";sel=null;persistDraft();render();return}
  if(t.dataset.rm){S.scheme="auto";S.base=S.base.filter(id=>id!==t.dataset.rm);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));sel=null;persistDraft();render();return}
  if(t.dataset.v){view=t.dataset.v;render();return}
  if(t.dataset.f){pFilter=t.dataset.f;renderPicker();return}
  if(t.dataset.pick){S.scheme="auto";const id=t.dataset.pick;S.base=S.base.includes(id)?S.base.filter(x=>x!==id):S.base.concat(id);t.setAttribute("aria-pressed",S.base.includes(id));persistDraft();return}
  if(t.dataset.pin!==undefined){const r=S.pins[+t.dataset.pin];sel={r,key:recKey(r)};render();return}
  if(t.id==="pinBtn"){const i=S.pins.findIndex(x=>recKey(x)===sel.key);if(i>=0)S.pins.splice(i,1);else S.pins.push(sel.r);persistDraft();renderPins();renderDetail();return}
- if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={scheme:s.scheme||"auto",name:s.name,base:s.base.filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[id]))};sel=null;view="wheel";persistDraft();render();return}
+ if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={scheme:s.scheme||"auto",name:s.name,base:s.base.map(reg).filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[reg(id)]))};sel=null;view="wheel";persistDraft();render();return}
  if(t.dataset.del!==undefined){const L=store.get(),s=L[+t.dataset.del];if(!confirm(`Delete "${s.name||"Untitled"}"?`))return;L.splice(+t.dataset.del,1);store.set(L);render();return}
 });
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&e.target.dataset.r){e.preventDefault();choose(e.target)}});
