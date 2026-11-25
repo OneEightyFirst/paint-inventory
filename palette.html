@@ -260,10 +260,24 @@ function wheel(){
  w=w.slice(k).concat(w.slice(0,k));
  const tintTo=(r,frac,rat=RAT)=>{if(!white)return null;const tot=r.reduce((s,[,x])=>s+x,0),L0=lch(recHex(r))[0],Lw=lch(white.h)[0],goal=L0+(Lw-L0)*frac;
   let b=null;for(const q of rat){const rr=r.concat([[white.id,tot*q]]),d=Math.abs(lch(recHex(rr))[0]-goal);if(!b||d<b.d)b={rr,d}}return b.rr};
- const rings=w.map(x=>[x.r,tintTo(x.r,.33),tintTo(x.r,.62)]);
- const all=src.map(p=>[p.id,1]);
- const values=white?[.8,.6,.4,.2,0].map(f=>f?tintTo(all,f,RAT.concat([12,16])):all):null;
- return {rings,white,values,all};
+ /* two rings like the Zorn chart: full strength outside, white-tinted inside */
+ const rings=w.map(x=>[x.r,tintTo(x.r,.45)]);
+ /* skin tones: the palette's red + yellow + darkest, in whatever small ratio lands nearest a mid flesh hue,
+    then stepped light (white) to dark (more of the darkest) */
+ const hueD=(p,H)=>{const h=lch(p.h)[2];return Math.min(Math.abs(h-H),360-Math.abs(h-H))};
+ const red=[...src].sort((a,b)=>hueD(a,32)-hueD(b,32))[0],yel=[...src].filter(p=>p!==red).sort((a,b)=>hueD(a,85)-hueD(b,85))[0];
+ const dark=[...src].filter(p=>p!==red&&p!==yel).sort((a,b)=>lch(a.h)[0]-lch(b.h)[0])[0];
+ let skin=null;
+ if(red&&yel){let best=1e9;for(const a of [1,2,3])for(const b of [1,2,3])for(const c of (dark?[0,.25,.5]:[0])){const r=[[red.id,a],[yel.id,b]].concat(c?[[dark.id,c]]:[]),h=recHex(r);
+  const [L,C,H]=lch(h),score=Math.min(Math.abs(H-58),360-Math.abs(H-58))+Math.abs(C-30)*.6+Math.abs(L-55)*.3;if(score<best){best=score;skin=r}}}
+ let values=null;
+ if(skin){const tot=skin.reduce((s,[,x])=>s+x,0),L3=lch(recHex(skin))[0];
+  /* deeper shadows: more red and a little of the darkest, so they stay warm brown instead of going grey */
+  const add=(r,id,q)=>{const o=r.find(([i])=>i===id);return o?r.map(([i,w])=>[i,i===id?w+q:w]):r.concat([[id,q]])};
+  const deeper=goal=>{if(!dark)return null;let b=null;for(const q of [.25,.5,1,1.5,2,3])for(const d of [.25,.5,1,1.5,2]){const r=add(add(skin,red.id,tot*q/4),dark.id,tot*d/4),[L,C,H]=lch(recHex(r));
+    const sc=Math.abs(L-goal)+Math.max(0,Math.min(Math.abs(H-50),360-Math.abs(H-50))-25)*.4+Math.max(0,12-C)*.8;if(!b||sc<b.sc)b={r,sc}}return b.r};
+  values=[white?tintTo(skin,.6):null,white?tintTo(skin,.3):null,skin,deeper(L3-13),deeper(L3-26)].filter(Boolean)}
+ return {rings,white,values};
 }
 const pt=(cx,cy,r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)];
 function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1);return `M${cx} ${cy}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z`}
@@ -277,33 +291,29 @@ function renderBase(){
 function renderWheel(){
  const W=wheel();
  if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty">Add at least two paints.</div></div>`;return}
- const n=W.rings.length,cx=340,cy=330,R=[118,182,250],half=Math.PI/n,ov=0;
+ const n=W.rings.length,cx=340,cy=330,R=[150,250],half=Math.PI/n,ov=0;
  let g="",labels="",mark="",over=[];
- /* outer ring first as full slices, inner rings layered over them */
- [[2,R[2],"br0"],[1,R[1],"br1"],[0,R[0],"br0"]].forEach(([k,r,f])=>{
-  W.rings.forEach((ring,i)=>{const rec=ring[2-k];if(!rec)return;
-   const rr=W.white?r:(k===2?R[2]:0);if(!rr)return;
+ /* outer ring as full slices to the centre, the tinted ring layered over the middle */
+ [[1,R[1],"br0"],[0,R[0],"br1"]].forEach(([k,r,f])=>{
+  W.rings.forEach((ring,i)=>{const rec=ring[1-k];if(!rec)return;
+   const rr=r;
    const h=recHex(rec),deg=i/n*360;
    const miss=rec.some(([id])=>byId[id]&&byId[id].missing);
    g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})"><path d="${slice(cx,cy,rr,-half-ov,half+ov)}" fill="${h}" filter="url(#${f})" data-r='${esc(JSON.stringify(rec))}' tabindex="0" aria-label="${esc(nameFor(h))}${miss?", uses a paint you don't own":""}"><title>${esc(nameFor(h))}${miss?" (uses a paint you don't own)":""}</title></path></g>`;
    if(miss)over.push({deg,rr,k});
-   if(sel&&sel.key===recKey(rec)){const rm=k===2?(R[1]+R[2])/2:k===1?(R[0]+R[1])/2:(52+R[0])/2,[mx,my]=pt(cx,cy,W.white?rm:(R[2]*.7),i/n*2*Math.PI);mark=`<circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#fff" stroke-width="3"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#111" stroke-width="1.2"/>`}
+   if(sel&&sel.key===recKey(rec)){const rm=k===1?(W.white?(R[0]+R[1])/2:R[1]*.7):R[0]*.62,[mx,my]=pt(cx,cy,rm,i/n*2*Math.PI);mark=`<circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#fff" stroke-width="3"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#111" stroke-width="1.2"/>`}
   })});
- const inner={2:R[1],1:R[0],0:W.white?52:0};
- over.forEach(({deg,rr,k})=>{const r0=inner[k]+5,r1=rr-5,a0=-half+.03,a1=half-.03,[x1,y1]=pt(cx,cy,r1,a0),[x2,y2]=pt(cx,cy,r1,a1),[x3,y3]=pt(cx,cy,r0,a1),[x4,y4]=pt(cx,cy,r0,a0);
+ const inner={1:W.white?R[0]:0,0:0};
+ over.forEach(({deg,rr,k})=>{const r0=Math.max(inner[k]+5,24),r1=rr-5,a0=-half+.03,a1=half-.03,[x1,y1]=pt(cx,cy,r1,a0),[x2,y2]=pt(cx,cy,r1,a1),[x3,y3]=pt(cx,cy,r0,a1),[x4,y4]=pt(cx,cy,r0,a0);
   g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})" pointer-events="none"><path d="M${x1} ${y1}A${r1} ${r1} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r0} ${r0} 0 0 0 ${x4} ${y4}Z" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.6" stroke-dasharray="4 4"/></g>`});
- /* hub: everything mixed */
- const hub=recHex(W.all);
- g+=`<circle cx="${cx}" cy="${cy}" r="${W.white?52:70}" fill="${hub}" filter="url(#br1)" data-r='${esc(JSON.stringify(W.all))}' tabindex="0" aria-label="All paints mixed"><title>Everything mixed</title></circle>`;
- if(sel&&sel.key===recKey(W.all))mark=`<circle cx="${cx}" cy="${cy}" r="9" fill="none" stroke="#fff" stroke-width="3"/>`;
  /* hue names round the rim, only where the family changes */
  let prev="";W.rings.forEach((ring,i)=>{const f=family(recHex(ring[0]));if(f===prev)return;prev=f;
-  const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[2]+26,a),anc=Math.abs(Math.sin(a))<.25?"middle":Math.sin(a)>0?"start":"end";
+  const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[1]+26,a),anc=Math.abs(Math.sin(a))<.25?"middle":Math.sin(a)>0?"start":"end";
   labels+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${anc}">${esc(f)}</text>`});
  let vals="";
- if(W.values){const bw=92,gap=10,x0=(520-5*bw-4*gap)/2;
-  vals=`<svg class="vals" viewBox="0 0 520 120" role="group" aria-label="Value scale">`+W.values.map((r,i)=>{const x=x0+i*(bw+gap),h=recHex(r);
-   return `<rect x="${x}" y="6" width="${bw}" height="78" fill="${h}" filter="url(#brv)" data-r='${esc(JSON.stringify(r))}' tabindex="0" aria-label="Value ${i+1}"></rect>${sel&&sel.key===recKey(r)?`<circle cx="${x+bw/2}" cy="45" r="9" fill="none" stroke="#fff" stroke-width="3"/>`:""}<text x="${x+bw/2}" y="110" text-anchor="middle">${i+1}</text>`}).join("")+`</svg>`}
+ if(W.values){const m=W.values.length,bw=92,gap=10,x0=(520-m*bw-(m-1)*gap)/2;
+  vals=`<svg class="vals" viewBox="0 0 520 140" role="group" aria-label="Skin tone value scale">`+W.values.map((r,i)=>{const x=x0+i*(bw+gap),h=recHex(r);
+   return `<rect x="${x}" y="6" width="${bw}" height="78" fill="${h}" filter="url(#brv)" data-r='${esc(JSON.stringify(r))}' tabindex="0" aria-label="Skin tone ${i+1}"></rect>${sel&&sel.key===recKey(r)?`<circle cx="${x+bw/2}" cy="45" r="9" fill="none" stroke="#fff" stroke-width="3"/>`:""}<text x="${x+bw/2}" y="108" text-anchor="middle">${i+1}</text>`}).join("")+`<text x="260" y="134" text-anchor="middle">Skin tone value scale</text></svg>`}
  const anyMiss=S.base.some(id=>byId[id]&&byId[id].missing);
  $("view").innerHTML=`<div class="sheet"><h3>${esc(S.name||"Untitled palette")}</h3>${anyMiss?`<p style="text-align:center;font-size:13px;color:#77746d;margin:2px 0 0">Dashed wedges use a colour you don't own</p>`:""}<svg class="wheel" viewBox="0 0 680 660" role="group" aria-label="Mixing wheel">${g}${mark}${labels}</svg>${vals}</div>`;
 }
