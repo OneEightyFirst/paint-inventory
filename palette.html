@@ -27,6 +27,7 @@ input[type=search],input[type=text]{font:16px Archivo,sans-serif;min-height:42px
 .lbl{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:14px 0 6px}
 /* toolbar + palette strip */
 .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sel{font:600 14px Archivo,sans-serif;min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:0 30px 0 12px}
 .tabs{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .tabs button{padding:0 18px;min-height:42px;border:0;background:transparent}
 .tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
@@ -131,7 +132,12 @@ dialog::backdrop{background:#0008}
 
 <div class="tools">
  <div class="tabs" role="group" aria-label="View"><button data-v="wheel" aria-pressed="true">Mixing wheel</button><button data-v="saved" aria-pressed="false" id="savedTab">Saved</button></div>
- <button class="btn pri" id="newBtn">+ New palette</button>
+ <div class="row" style="align-items:center">
+  <label class="muted" for="schSel">Scheme</label>
+  <select id="schSel" class="sel"></select>
+  <span id="keyWrap" class="row" style="align-items:center"><label class="muted" for="keySel">from</label><select id="keySel" class="sel"></select></span>
+  <button class="btn pri" id="newBtn">+ New palette</button>
+ </div>
 </div>
 <section class="base" aria-label="Paints in this palette" id="baseStrip"></section>
 
@@ -217,7 +223,7 @@ function parts(ws){/* weights -> small whole-number parts */
 
 
 /* ---------- state ---------- */
-let S={name:"",base:[],pins:[]};
+let S={name:"",base:[],pins:[],scheme:"auto"};
 let sel=null,view="wheel",pFilter="mix";
 const store={get(){try{return JSON.parse(localStorage.getItem("paintPalettes")||"[]")}catch(e){return []}},
  set(v){try{localStorage.setItem("paintPalettes",JSON.stringify(v));return true}catch(e){return false}}};
@@ -303,7 +309,24 @@ function renderSaved(){
   return `<div class="sv"><div class="strip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</div><div class="meta"><b>${esc(s.name||"Untitled")}</b><small>${s.base.length} paints · ${s.pins.length} pinned</small></div><button class="btn" data-load="${i}">Open</button><button class="link" data-del="${i}">Delete</button></div>`}).join("")}</div>`
   :`<div class="sheet"><div class="empty">Nothing saved yet.</div></div>`;
 }
-function render(){renderBase();renderPins();renderDetail();
+function renderSchemeBar(){
+ const keys=S.base.map(id=>byId[id]).filter(p=>p&&!isWhite(p)&&lch(p.h)[1]>6);
+ $("schSel").innerHTML=`<option value="auto">Auto (my picks)</option>`+SCHEMES.filter(x=>x[0]!=="zorn").map(([k,l])=>`<option value="${k}">${l}</option>`).join("");
+ $("schSel").value=S.scheme||"auto";
+ $("keySel").innerHTML=keys.map(p=>`<option value="${esc(p.id)}">${esc(p.n)}</option>`).join("");
+ if(keys[0])$("keySel").value=keys[0].id;
+ $("keyWrap").style.display=(S.scheme&&S.scheme!=="auto"&&keys.length)?"":"none";
+}
+function applyScheme(scheme,keyId){
+ if(scheme==="auto"){S.scheme="auto";render();return}
+ const key=keyId||S.base.find(id=>byId[id]&&!isWhite(byId[id])&&lch(byId[id].h)[1]>6);
+ if(!key){toast("Add a coloured paint first");$("schSel").value="auto";return}
+ N={scheme,paint:key,hex:byId[key].h,white:S.base.some(id=>byId[id]&&isWhite(byId[id]))||!S.base.length};
+ const plan=planNew(),old=S.name,auto=!old||/( · |^Zorn$)/.test(old);
+ S.base=plan.map(x=>x.p.id);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));S.scheme=scheme;
+ if(auto)S.name=`${SCHEMES.find(x=>x[0]===scheme)[1]} · ${byId[key].n}`;
+ sel=null;persistDraft();render()}
+function render(){renderBase();renderSchemeBar();renderPins();renderDetail();
  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===view));
  $("savedTab").textContent=`Saved (${store.get().length})`;
  view==="wheel"?renderWheel():renderSaved()}
@@ -318,7 +341,7 @@ function renderPicker(){
 }
 
 /* ---------- new palette: start colour + scheme -> your bottles ---------- */
-const SCHEMES=[["comp","Complementary",[0,180]],["ana","Analogous",[-30,0,30]],["tri","Triadic",[0,120,240]],["split","Split complementary",[0,150,210]],["tet","Tetradic",[0,90,180,270]],["mono","Monochrome",null],["zorn","Zorn",null]];
+const SCHEMES=[["mono","Monochromatic",null],["ana","Analogous",[-30,0,30]],["comp","Complementary",[0,180]],["split","Split complementary",[0,150,210]],["tri","Triadic",[0,120,240]],["tet","Tetradic",[0,90,180,270]],["zorn","Zorn",null]];
 const ZORN=["#C4952F","#C8232C","#252A33"];
 let N={scheme:"comp",hex:"#C8232C",paint:null,white:true};
 function rot(h,off,dl=0,cf=1){const [L,C,H]=lch(h),a=(H+off)*Math.PI/180;return lab2hex([Math.max(5,Math.min(95,L+dl)),C*cf*Math.cos(a),C*cf*Math.sin(a)])}
@@ -346,12 +369,12 @@ function renderNew(){
  $("nPrev").innerHTML=planNew().map(({p,d,white})=>`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${white?"for tints":d<1?"start colour":"ΔE "+d.toFixed(1)+" from ideal"}</small></span></span>`).join("");
 }
 function createNew(){const plan=planNew();S={base:plan.map(x=>x.p.id),pins:[],
- name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
+ scheme:N.scheme==="zorn"?"auto":N.scheme,name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
  sel=null;view="wheel";$("newDlg").close();persistDraft();render()}
 
 /* ---------- share / save ---------- */
-function encode(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.name,b:S.base,p:S.pins}))))}
-function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {name:o.n||"",base:(o.b||[]).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[id]))}}catch(e){return null}}
+function encode(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.name,b:S.base,p:S.pins,s:S.scheme}))))}
+function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {scheme:o.s||"auto",name:o.n||"",base:(o.b||[]).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[id]))}}catch(e){return null}}
 function toast(t){const el=$("toast");el.textContent=t;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),2000)}
 function persistDraft(){try{localStorage.setItem("paletteDraft",encode())}catch(e){}}
 
@@ -364,13 +387,13 @@ document.addEventListener("click",e=>{
  if(t.id==="newBtn"){renderNew();$("newDlg").showModal();return}
  if(t.dataset.sch){N.scheme=t.dataset.sch;renderNew();return}
  if(t.dataset.start){N.paint=t.dataset.start;renderNew();return}
- if(t.dataset.rm){S.base=S.base.filter(id=>id!==t.dataset.rm);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));sel=null;persistDraft();render();return}
+ if(t.dataset.rm){S.scheme="auto";S.base=S.base.filter(id=>id!==t.dataset.rm);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));sel=null;persistDraft();render();return}
  if(t.dataset.v){view=t.dataset.v;render();return}
  if(t.dataset.f){pFilter=t.dataset.f;renderPicker();return}
- if(t.dataset.pick){const id=t.dataset.pick;S.base=S.base.includes(id)?S.base.filter(x=>x!==id):S.base.concat(id);t.setAttribute("aria-pressed",S.base.includes(id));persistDraft();return}
+ if(t.dataset.pick){S.scheme="auto";const id=t.dataset.pick;S.base=S.base.includes(id)?S.base.filter(x=>x!==id):S.base.concat(id);t.setAttribute("aria-pressed",S.base.includes(id));persistDraft();return}
  if(t.dataset.pin!==undefined){const r=S.pins[+t.dataset.pin];sel={r,key:recKey(r)};render();return}
  if(t.id==="pinBtn"){const i=S.pins.findIndex(x=>recKey(x)===sel.key);if(i>=0)S.pins.splice(i,1);else S.pins.push(sel.r);persistDraft();renderPins();renderDetail();return}
- if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={name:s.name,base:s.base.filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[id]))};sel=null;view="wheel";persistDraft();render();return}
+ if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={scheme:s.scheme||"auto",name:s.name,base:s.base.filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[id]))};sel=null;view="wheel";persistDraft();render();return}
  if(t.dataset.del!==undefined){const L=store.get(),s=L[+t.dataset.del];if(!confirm(`Delete "${s.name||"Untitled"}"?`))return;L.splice(+t.dataset.del,1);store.set(L);render();return}
 });
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&e.target.dataset.r){e.preventDefault();choose(e.target)}});
@@ -381,10 +404,12 @@ $("nClose").onclick=()=>$("newDlg").close();
 $("nColor").oninput=e=>{N.hex=e.target.value.toUpperCase();N.paint=null;renderNew()};
 $("nWhite").onchange=e=>{N.white=e.target.checked;renderNew()};
 $("nCreate").onclick=createNew;
-$("nBlank").onclick=()=>{S={name:"",base:[],pins:[]};sel=null;view="wheel";$("newDlg").close();persistDraft();render()};
+$("schSel").onchange=e=>applyScheme(e.target.value);
+$("keySel").onchange=e=>applyScheme(S.scheme,e.target.value);
+$("nBlank").onclick=()=>{S={name:"",base:[],pins:[],scheme:"auto"};sel=null;view="wheel";$("newDlg").close();persistDraft();render()};
 $("pname").oninput=e=>{S.name=e.target.value;persistDraft();const h=document.querySelector(".sheet h3");if(h)h.textContent=S.name||"Untitled palette"};
 $("saveBtn").onclick=()=>{if(!S.base.length){toast("Add some paints first");return}
- const L=store.get(),name=S.name.trim()||"Untitled palette",i=L.findIndex(x=>x.name===name),rec={name,base:S.base,pins:S.pins,at:Date.now()};
+ const L=store.get(),name=S.name.trim()||"Untitled palette",i=L.findIndex(x=>x.name===name),rec={name,base:S.base,pins:S.pins,scheme:S.scheme,at:Date.now()};
  if(i>=0)L[i]=rec;else L.unshift(rec);toast(store.set(L)?(i>=0?"Updated":"Saved"):"Couldn't save here; use Copy link");S.name=name;render()};
 $("shareBtn").onclick=async()=>{const url=location.href.split("#")[0]+"#p="+encode();
  try{await navigator.clipboard.writeText(url);toast("Link copied")}catch(e){prompt("Copy this link",url)}};
@@ -392,7 +417,7 @@ $("shareBtn").onclick=async()=>{const url=location.href.split("#")[0]+"#p="+enco
 /* ---------- boot ---------- */
 (function(){const m=location.hash.match(/#p=(.+)/);let s=m&&decode(m[1]);
  if(!s){try{const d=localStorage.getItem("paletteDraft");s=d&&decode(d)}catch(e){}}
- if(s&&s.base.length)S=s;else{N.scheme="zorn";const plan=planNew();S={name:"Zorn",base:plan.map(x=>x.p.id),pins:[]};N.scheme="comp"}
+ if(s&&s.base.length)S=s;else{N.scheme="zorn";const plan=planNew();S={name:"Zorn",base:plan.map(x=>x.p.id),pins:[],scheme:"auto"};N.scheme="comp"}
  render()})();
 </script>
 </body></html>
