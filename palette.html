@@ -237,7 +237,8 @@ const recKey=r=>r.map(([i,w])=>i+"*"+w).sort().join("+");
 const OPAQUE=PAINTS.filter(p=>p.t==="opaque");
 /* a colour the scheme wants but no bottle comes close to: kept as a marked "not owned" paint */
 const FAR=10;
-function ideal(h){h=h.toUpperCase();const id="ideal:"+h;if(!byId[id]){const c=nearest(h,1,OPAQUE)[0];byId[id]={id,n:nameFor(h),b:"Not owned",l:"",t:"opaque",h,s:"Not owned",missing:true,alt:c.p.id,altD:c.d}}return id}
+const KNOWN={"#713509":"Grim Rust"};
+function ideal(h,name){h=h.toUpperCase();const id="ideal:"+h;if(!byId[id]){const c=nearest(h,1,OPAQUE)[0];byId[id]={id,n:name||(KNOWN[h]||nameFor(h)),b:"Not owned",l:"",t:"opaque",h,s:"Not owned",missing:true,alt:c.p.id,altD:c.d}}return id}
 const reg=id=>{if(typeof id==="string"&&id.startsWith("ideal:"))ideal(id.slice(6));return id};
 const isWhite=p=>{const [L,C]=lch(p.h);return L>88&&C<12};
 const hueOrder=p=>{const [L,C,H]=lch(p.h);return C<10?1000+(100-L):H};
@@ -253,16 +254,16 @@ const SKIN=(()=>{const used=new Set();return SKIN_T.map(h=>{const m=OPAQUE.filte
 const RAT=[.25,1/3,.5,1,1.5,2,3,4,6,8];
 function wheel(){
  const ps=S.base.map(id=>byId[id]).filter(Boolean);if(ps.length<2)return null;
- const white=ps.find(isWhite)||null,cols=ps.filter(p=>!isWhite(p)),src=cols.length>=2?cols:ps;
+ const white=ps.find(isWhite)||ps.find(p=>{const [L,C]=lch(p.h);return L>86&&C<22})||null,cols=ps.filter(p=>p!==white),src=cols.length>=2?cols:ps;
  /* the palette's own bottles, plus the bottles you own that sit closest to what they'd mix to:
     every wedge is a real paint, no mixing needed */
  const cand=[],have=new Set();const push=p=>{if(have.has(p.id))return;have.add(p.id);const [L,C,H]=lch(p.h);cand.push({r:[[p.id,1]],h:p.h,L,C,H})};
  src.forEach(push);
  const pool=OPAQUE.filter(p=>!isWhite(p));
- for(let i=0;i<src.length;i++)for(let j=i+1;j<src.length;j++)for(const [a,b] of [[3,1],[1,1],[1,3]]){
+ if(src.length<10)for(let i=0;i<src.length;i++)for(let j=i+1;j<src.length;j++)for(const [a,b] of [[3,1],[1,1],[1,3]]){
   const h=recHex([[src[i].id,a],[src[j].id,b]]),m=nearest(h,1,pool.filter(p=>!have.has(p.id)))[0];if(m&&m.d<12)push(m.p)}
  cand.sort((x,y)=>x.H-y.H);
- let w=cand;if(cand.length>18){const st=cand.length/18;w=Array.from({length:18},(_,k)=>cand[Math.floor(k*st)])}
+ const cap=Math.max(18,src.length);let w=cand;if(cand.length>cap){const st=cand.length/cap;w=Array.from({length:cap},(_,k)=>cand[Math.floor(k*st)])}
  let k=0,best=1e9;w.forEach((x,i)=>{const d=Math.min(Math.abs(x.H-88),360-Math.abs(x.H-88));if(x.C>15&&d<best){best=d;k=i}});
  w=w.slice(k).concat(w.slice(0,k));
  const tintTo=(r,frac,rat=RAT)=>{if(!white)return null;const tot=r.reduce((s,[,x])=>s+x,0),L0=lch(recHex(r))[0],Lw=lch(white.h)[0],goal=L0+(Lw-L0)*frac;
@@ -300,7 +301,7 @@ function renderWheel(){
   g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})" pointer-events="none"><path d="M${x1} ${y1}A${r1} ${r1} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r0} ${r0} 0 0 0 ${x4} ${y4}Z" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.6" stroke-dasharray="4 4"/></g>`});
  /* bottle name beside every wedge; the palette's own paints in bold */
  W.rings.forEach((ring,i)=>{const r=ring[0],lab=byId[r[0][0]].n,isBase=S.base.includes(r[0][0]);
-  const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[1]+18,a),sn=Math.sin(a),anc=Math.abs(sn)<.2?"middle":sn>0?"start":"end",dy=Math.cos(a)>.8?-2:Math.cos(a)<-.8?12:4;
+  const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[1]+18,a),sn=Math.sin(a),anc=Math.abs(sn)<.07?"middle":sn>0?"start":"end",dy=Math.cos(a)>.8?-2:Math.cos(a)<-.8?12:4;
   labels+=`<text x="${x.toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anc}"${isBase?' style="font-weight:700;fill:#4a4740"':""}>${esc(lab)}</text>`});
  let vals="";
  {const bw=92,gap=10,x0=(520-5*bw-4*gap)/2;
@@ -365,12 +366,16 @@ function renderPicker(){
 
 /* ---------- new palette: start colour + scheme -> your bottles ---------- */
 const SCHEMES=[["mono","Monochromatic",null],["ana","Analogous",[-30,0,30]],["comp","Complementary",[0,180]],["split","Split complementary",[0,150,210]],["tri","Triadic",[0,120,240]],["tet","Tetradic",[0,90,180,270]],["zorn","Zorn",null]];
+const SETS={jb12:{name:"John Blanche Vol 1–2",ids:["The Darkness","Ivory White","Moonbeam Yellow","Ironclad Grey","Blighted Green","Banshee Brown","Bloodmoon Red","Warm Skin Shade","Grimdark Shadow","Emperor Gold","Fiery Vermilion","Blanched Berry","Sunburst Ochre","Midnight Olive","Tainted Garden","Ruddy Terra","Turnbull Turquoise","Voodoo Shade","#713509","Heavy Metal"]}};
+const setIds=k=>SETS[k].ids.map(n=>n.startsWith("#")?ideal(n):(PAINTS.find(p=>p.b==="Army Painter"&&p.n===n)||{}).id).filter(Boolean);
+const isSet=k=>!!SETS[k];
 const ZORN=["#C4952F","#C8232C","#252A33"];
 let N={scheme:"comp",hex:"#C8232C",paint:null,white:true};
 function rot(h,off,dl=0,cf=1){const [L,C,H]=lch(h),a=(H+off)*Math.PI/180;return lab2hex([Math.max(5,Math.min(95,L+dl)),C*cf*Math.cos(a),C*cf*Math.sin(a)])}
 function planNew(){
  const used=new Set(),pick=h=>{const m=OPAQUE.filter(p=>!used.has(p.id)&&!isWhite(p)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0];if(m.d>FAR)return {p:byId[ideal(h)],d:m.d,missing:true,alt:m};used.add(m.p.id);return m};
  let out=[];
+ if(isSet(N.scheme))return setIds(N.scheme).map(id=>({p:byId[id],d:0,missing:byId[id].missing,alt:byId[id].missing?{p:byId[byId[id].alt]}:null,set:true}));
  if(N.scheme==="zorn")out=ZORN.map(pick);
  else{
   const key=N.paint?{p:byId[N.paint],d:0}:pick(N.hex);used.add(key.p.id);out.push(key);
@@ -382,17 +387,17 @@ function planNew(){
  return out;
 }
 function renderNew(){
- $("nScheme").innerHTML=SCHEMES.map(([k,l])=>`<button data-sch="${k}" aria-pressed="${k===N.scheme}">${l}</button>`).join("");
- $("nStartWrap").style.display=N.scheme==="zorn"?"none":"";
+ $("nScheme").innerHTML=SCHEMES.map(([k,l])=>`<button data-sch="${k}" aria-pressed="${k===N.scheme}">${l}</button>`).join("")+Object.entries(SETS).map(([k,o])=>`<button data-sch="${k}" aria-pressed="${k===N.scheme}">${esc(o.name)}</button>`).join("");
+ $("nStartWrap").style.display=(N.scheme==="zorn"||isSet(N.scheme))?"none":"";$("nWhite").parentElement.style.display=isSet(N.scheme)?"none":"";
  const p=N.paint&&byId[N.paint];
  $("nSw").style.background=p?p.h:N.hex;$("nName").textContent=p?p.n:"Custom colour";$("nSub").textContent=p?p.s:N.hex+" · matched to your nearest bottle";
  $("nColor").value=(p?p.h:N.hex).toLowerCase();
  if(!$("nMini").childElementCount)$("nMini").innerHTML=OPAQUE.filter(x=>lch(x.h)[1]>10).sort((a,b)=>hueOrder(a)-hueOrder(b)).map(x=>`<button data-start="${esc(x.id)}" style="background:${x.h}" title="${esc(x.n)}" aria-label="${esc(x.n)}"></button>`).join("");
  $("nMini").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.start===N.paint));
- $("nPrev").innerHTML=planNew().map(({p,d,white,missing,alt})=>missing?`<span class="pchip miss"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>Not owned · closest is ${esc(alt.p.n)}, ΔE ${d.toFixed(0)}</small></span></span>`:`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${white?"for tints":d<1?"start colour":"ΔE "+d.toFixed(1)+" from ideal"}</small></span></span>`).join("");
+ $("nPrev").innerHTML=planNew().map(({p,d,white,missing,alt,set})=>missing?`<span class="pchip miss"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>Not owned · closest is ${esc(alt.p.n)}${d?", ΔE "+d.toFixed(0):""}</small></span></span>`:`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${set?esc(p.s):white?"for tints":d<1?"start colour":"ΔE "+d.toFixed(1)+" from ideal"}</small></span></span>`).join("");
 }
 function createNew(){const plan=planNew();S={base:plan.map(x=>x.p.id),pins:[],
- scheme:N.scheme==="zorn"?"auto":N.scheme,name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
+ scheme:(N.scheme==="zorn"||isSet(N.scheme))?"auto":N.scheme,name:isSet(N.scheme)?SETS[N.scheme].name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
  sel=null;view="wheel";$("newDlg").close();persistDraft();render()}
 
 /* ---------- share / save ---------- */
