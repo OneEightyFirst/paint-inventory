@@ -176,6 +176,8 @@ dialog::backdrop{background:#0008}
 <dialog id="newDlg" aria-label="New palette">
  <div class="dh"><div class="row"><h2 style="font-size:22px">New palette</h2><button class="link" id="nClose">Cancel</button></div></div>
  <div class="db">
+  <div class="lbl">Name</div>
+  <input type="text" id="nNameIn" placeholder="Palette name" aria-label="Palette name">
   <div class="lbl">Scheme</div>
   <div class="fchips" id="nScheme"></div>
   <div id="nSizeWrap"><div class="lbl">Number of colours</div><div class="fchips" id="nSize"></div></div>
@@ -424,10 +426,12 @@ function renderNew(){
   let h="";for(let r=1;r<=6;r++)for(let c=1;c<=28;c++){const x=byId[RACK[r-1][c-1]];h+=x?`<button data-start="${esc(x.id)}" style="background:${x.h}" title="${esc(x.n)} · R${r}-${String(c).padStart(2,"0")}" aria-label="${esc(x.n)}"></button>`:`<span></span>`}
   $("nMini").innerHTML=h}
  $("nMini").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.start===N.paint));
+ if(!N.nameEdited)$("nNameIn").value=autoName();
  $("nPrev").innerHTML=planNew().map(({p,d,white,missing,alt,set,role})=>missing?`<span class="pchip miss"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${role?`<b class="role">${esc(role)}</b> · `:""}Not owned · closest is ${esc(alt.p.n)}${d?", ΔE "+d.toFixed(0):""}</small></span></span>`:`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${role?`<b class="role">${esc(role)}</b> · `:""}${set?esc(p.s):white?esc(p.s):d<1?esc(p.s):"ΔE "+d.toFixed(1)}</small></span></span>`).join("");
 }
+function autoName(){const plan=planNew();return `${SCHEMES.find(s=>s[0]===N.scheme)?.[1]||"Palette"} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`}
 function createNew(){const plan=planNew();S={roles:Object.fromEntries(plan.filter(x=>x.role).map(x=>[x.p.id,x.role])),base:plan.map(x=>x.p.id),pins:[],
- size:N.size,scheme:(N.scheme==="zorn"||isSet(N.scheme))?"auto":N.scheme,name:isSet(N.scheme)?SETS[N.scheme].name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
+ size:N.size,scheme:(N.scheme==="zorn"||isSet(N.scheme))?"auto":N.scheme,name:($("nNameIn").value.trim()||autoName())};
  sel=null;view="wheel";$("newDlg").close();persistDraft();render()}
 
 /* ---------- share / save ---------- */
@@ -444,7 +448,7 @@ document.addEventListener("click",e=>{
  if(t.dataset.addbase){if(!S.base.includes(t.dataset.addbase)){S.base.push(t.dataset.addbase);S.scheme="auto"}persistDraft();render();return}
  if(t.dataset.r){choose(t);return}
  if(t.id==="addBtn"){renderPicker();$("picker").showModal();return}
- if(t.id==="newBtn"||t.dataset.opennew){renderNew();$("newDlg").showModal();$("nCreate").focus();return}
+ if(t.id==="newBtn"||t.dataset.opennew){N.nameEdited=false;renderNew();$("newDlg").showModal();$("nCreate").focus();return}
  if(t.dataset.size){N.size=+t.dataset.size;renderNew();return}
  if(t.dataset.sch){N.scheme=t.dataset.sch;renderNew();return}
  if(t.dataset.start){N.paint=t.dataset.start;renderNew();return}
@@ -467,6 +471,7 @@ $("nClose").onclick=()=>$("newDlg").close();
 $("nColor").oninput=e=>{N.hex=e.target.value.toUpperCase();N.paint=null;renderNew()};
 $("nWhite").onchange=e=>{N.white=e.target.checked;renderNew()};
 $("nCreate").onclick=createNew;
+$("nNameIn").oninput=e=>{N.nameEdited=!!e.target.value.trim()};
 $("schSel").onchange=e=>applyScheme(e.target.value);
 $("keySel").onchange=e=>applyScheme(S.scheme,e.target.value);
 $("sizeSel").onchange=e=>{S.size=+e.target.value;applyScheme(S.scheme,$("keySel").value)};
