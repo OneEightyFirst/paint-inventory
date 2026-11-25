@@ -244,7 +244,7 @@ const hueOrder=p=>{const [L,C,H]=lch(p.h);return C<10?1000+(100-L):H};
 function nearest(h,n=3,pool=PAINTS){return pool.map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d).slice(0,n)}
 function family(h){const [L,C,H]=lch(h);if(C<8)return L>80?"White":L<25?"Black":"Grey";
  return [[20,"Red"],[45,"Red / Orange"],[65,"Orange"],[85,"Yellow / Orange"],[105,"Yellow"],[135,"Yellow / Green"],[175,"Green"],[215,"Blue / Green"],[260,"Blue"],[300,"Blue / Violet"],[330,"Violet"],[350,"Red / Violet"],[361,"Red"]].find(([a])=>H<a)[1]}
-function nameFor(h){const L=lch(h)[0],f=family(h);return ["White","Black","Grey"].includes(f)?(f==="Grey"?"Neutral grey":"Near "+f.toLowerCase()):(L<35?"Dark ":L>75?"Light ":"")+f.toLowerCase().replace(/^./,c=>c.toUpperCase())}
+function nameFor(h){const L=lch(h)[0],f=family(h);return ["White","Black","Grey"].includes(f)?(f==="Grey"?"Neutral grey":"Near "+f.toLowerCase()):((L<35?"dark ":L>75?"light ":"")+f.toLowerCase()).replace(/^./,c=>c.toUpperCase())}
 
 /* ---------- skin reference: fixed light-to-deep skin tones, matched to bottles you own ---------- */
 const SKIN_T=["#E8C0A2","#CF9A78","#A87253","#734B36","#43302A"];
@@ -294,16 +294,16 @@ function renderWheel(){
  const inner={1:W.white?R[0]:0,0:0};
  over.forEach(({deg,rr,k})=>{const r0=Math.max(inner[k]+5,24),r1=rr-5,a0=-half+.03,a1=half-.03,[x1,y1]=pt(cx,cy,r1,a0),[x2,y2]=pt(cx,cy,r1,a1),[x3,y3]=pt(cx,cy,r0,a1),[x4,y4]=pt(cx,cy,r0,a0);
   g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})" pointer-events="none"><path d="M${x1} ${y1}A${r1} ${r1} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r0} ${r0} 0 0 0 ${x4} ${y4}Z" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.6" stroke-dasharray="4 4"/></g>`});
- /* hue names round the rim, only where the family changes */
- let prev="";W.rings.forEach((ring,i)=>{const f=family(recHex(ring[0]));if(f===prev)return;prev=f;
-  const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[1]+26,a),anc=Math.abs(Math.sin(a))<.25?"middle":Math.sin(a)>0?"start":"end";
-  labels+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${anc}">${esc(f)}</text>`});
+ /* a name beside every wedge: the bottle's own name for a straight paint, a colour name for a mix */
+ W.rings.forEach((ring,i)=>{const r=ring[0],lab=r.length===1?byId[r[0][0]].n:nameFor(recHex(r));
+  const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[1]+18,a),sn=Math.sin(a),anc=Math.abs(sn)<.2?"middle":sn>0?"start":"end",dy=Math.cos(a)>.8?-2:Math.cos(a)<-.8?12:4;
+  labels+=`<text x="${x.toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="${anc}"${r.length===1?' style="font-weight:700;fill:#4a4740"':""}>${esc(lab)}</text>`});
  let vals="";
  {const bw=92,gap=10,x0=(520-5*bw-4*gap)/2;
   vals=`<svg class="vals" viewBox="0 0 520 150" role="group" aria-label="Skin tone reference">`+SKIN.map((p,i)=>{const x=x0+i*(bw+gap);
    return `<rect x="${x}" y="6" width="${bw}" height="78" fill="${p.h}" filter="url(#brv)" data-paint="${esc(p.id)}" tabindex="0" style="cursor:pointer" aria-label="Skin tone ${i+1}: ${esc(p.n)}"><title>${esc(p.n)}</title></rect>${sel&&sel.paint===p.id?`<circle cx="${x+bw/2}" cy="45" r="9" fill="none" stroke="#fff" stroke-width="3"/>`:""}<text x="${x+bw/2}" y="104" text-anchor="middle">${i+1}</text><text x="${x+bw/2}" y="121" text-anchor="middle" style="font-size:11px;fill:#77746d">${esc(p.n)}</text>`}).join("")+`<text x="260" y="146" text-anchor="middle">Skin tones from your rack</text></svg>`}
  const anyMiss=S.base.some(id=>byId[id]&&byId[id].missing);
- $("view").innerHTML=`<div class="sheet"><h3>${esc(S.name||"Untitled palette")}</h3>${anyMiss?`<p style="text-align:center;font-size:13px;color:#77746d;margin:2px 0 0">Dashed wedges use a colour you don't own</p>`:""}<svg class="wheel" viewBox="0 0 680 660" role="group" aria-label="Mixing wheel">${g}${mark}${labels}</svg>${vals}</div>`;
+ $("view").innerHTML=`<div class="sheet"><h3>${esc(S.name||"Untitled palette")}</h3>${anyMiss?`<p style="text-align:center;font-size:13px;color:#77746d;margin:2px 0 0">Dashed wedges use a colour you don't own</p>`:""}<svg class="wheel" viewBox="0 0 680 660" style="overflow:visible" role="group" aria-label="Mixing wheel">${g}${mark}${labels}</svg>${vals}</div>`;
 }
 function renderDetail(){
  const d=$("detail");
