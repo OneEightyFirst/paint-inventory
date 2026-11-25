@@ -4,133 +4,145 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Archivo:wght@400;600&display=swap" rel="stylesheet">
 <style>
-/* VOICE: same painter's bench as the rack page: quiet, exact, the colour does the talking
-   IDEA: a painted mixing wheel on card, like a Zorn chart, built only from bottles on the wall
-   LAYOUT: chosen paints on top, wheel centre stage, detail + save card beside it */
-:root{color-scheme:light dark;--bg:light-dark(#ecebe6,#121212);--card:light-dark(#f6f5f1,#1a1a1b);--ink:light-dark(#1b1b1c,#ecebe6);--mute:light-dark(#5d5b55,#a19e96);--acc:#c79a3c;--line:light-dark(#cfccc4,#2c2c2e);--paper:#f3f1ea}
+/* VOICE: same painter's bench as the rack page; few words, the colour does the talking
+   IDEA: a hand-painted Zorn chart on card stock, brushed wedges with ragged edges, built only from bottles on the wall */
+:root{color-scheme:light dark;--bg:light-dark(#ecebe6,#121212);--card:light-dark(#f6f5f1,#1a1a1b);--ink:light-dark(#1b1b1c,#ecebe6);--mute:light-dark(#5d5b55,#a19e96);--acc:#c79a3c;--line:light-dark(#cfccc4,#2c2c2e);--paper:#f4f2ec}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip}
 .band{padding:clamp(20px,3vw,40px) max(4vw,14px)}
 nav.top{display:flex;gap:4px;margin-bottom:18px}
 nav.top a{font:600 14px Archivo,sans-serif;color:var(--mute);text-decoration:none;padding:6px 12px;border-radius:8px}
 nav.top a[aria-current]{color:var(--ink);background:color-mix(in srgb,var(--ink) 9%,transparent)}
-h1{font:700 clamp(30px,4vw,44px)/1.05 "Archivo Narrow",sans-serif;margin:0 0 6px}
+h1{font:700 clamp(30px,4vw,44px)/1.05 "Archivo Narrow",sans-serif;margin:0 0 18px}
 h2,h3{font-family:"Archivo Narrow",sans-serif;margin:0}
-.sub{color:var(--mute);margin:0 0 20px;max-width:70ch}
 button{font:600 14px Archivo,sans-serif;color:var(--ink);cursor:pointer}
 .btn{min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:transparent}
 .btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .btn:disabled{opacity:.4;cursor:default}
 .link{border:0;background:none;padding:0;color:var(--mute);text-decoration:underline;font-weight:400}
-button:focus-visible,input:focus-visible,a:focus-visible,path:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+button:focus-visible,input:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 input[type=search],input[type=text]{font:16px Archivo,sans-serif;min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);width:100%}
 .dot{display:inline-block;width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px #0003}
-/* palette strip */
-.base{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
-.pchip{display:flex;align-items:center;gap:8px;padding:4px 6px 4px 4px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:14px}
+.muted{color:var(--mute);font-size:13px}
+.lbl{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:14px 0 6px}
+/* toolbar + palette strip */
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tabs{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tabs button{padding:0 18px;min-height:42px;border:0;background:transparent}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.base{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:16px}
+.pchip{display:flex;align-items:center;gap:8px;padding:4px 4px 4px 4px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:14px}
 .pchip .dot{width:30px;height:30px}
 .pchip small{color:var(--mute);display:block;font-size:11px;line-height:1.1}
 .pchip .x{border:0;background:none;width:28px;height:28px;border-radius:50%;color:var(--mute);font-size:18px;line-height:1}
 .pchip .x:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}
 .add{min-height:40px;border-radius:999px;border:1px dashed var(--mute);background:transparent;padding:0 16px}
-.hint{font-size:13px;color:var(--mute);margin:8px 2px 0}
-.starters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:13px;color:var(--mute)}
-.starters button{min-height:32px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px}
-.tabs{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;width:max-content;margin:20px 0 14px}
-.tabs button{padding:0 18px;min-height:42px;border:0;background:transparent}
-.tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
-.wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:22px;align-items:start}
-.sheet{background:var(--paper);color:#2a2926;border-radius:14px;padding:clamp(14px,3vw,28px);box-shadow:0 10px 30px #0003}
-.sheet h3{text-align:center;font-size:22px;color:#4a4740;margin-bottom:4px}
-.sheet .cap{text-align:center;font-size:13px;color:#77746d;margin:0 0 6px}
-svg.wheel{display:block;width:100%;max-width:560px;margin:0 auto}
-svg.wheel path{cursor:pointer;stroke:var(--paper);stroke-width:1.5}
-svg.wheel path:hover{filter:brightness(1.08)}
-svg.wheel path.sel{stroke:#111;stroke-width:3}
-.values{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-width:480px;margin:18px auto 0}
-.values button{aspect-ratio:1.2;border:0;border-radius:4px}
-.values button.sel{outline:3px solid #111;outline-offset:2px}
-.values span{text-align:center;font-size:12px;color:#77746d}
-.empty{text-align:center;color:#77746d;padding:60px 10px}
-.card{border:1px solid var(--line);border-radius:14px;padding:16px;position:sticky;top:14px;background:var(--card)}
-.card+.card{margin-top:14px;position:static}
-.big{height:110px;border-radius:8px;margin-bottom:12px;box-shadow:inset 0 0 0 1px #0002}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}
+/* the painted sheet */
+.sheet{background:var(--paper) radial-gradient(120% 90% at 50% 40%,#fbfaf6,#ebe8df);color:#3a3833;border-radius:6px;padding:clamp(12px,3vw,28px);box-shadow:0 1px 0 #fff8 inset,0 14px 34px #0004}
+.sheet h3{text-align:center;font:600 clamp(22px,3vw,30px) Archivo,sans-serif;color:#4a4740}
+svg.wheel{display:block;width:100%;max-width:620px;margin:0 auto;overflow:visible}
+svg.wheel [data-r]{cursor:pointer}
+svg.wheel text{font:500 13px Archivo,sans-serif;fill:#6d6a63}
+svg.vals{display:block;width:100%;max-width:520px;margin:6px auto 0;overflow:visible}
+svg.vals text{font:500 15px Archivo,sans-serif;fill:#4a4740}
+.empty{text-align:center;color:#77746d;padding:80px 10px}
+/* side cards */
+.card{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--card)}
+.card+.card{margin-top:14px}
+.big{height:96px;border-radius:8px;margin-bottom:12px;box-shadow:inset 0 0 0 1px #0002}
 .card h2{font-size:22px;line-height:1.15}
-.recipe{list-style:none;padding:0;margin:10px 0;display:grid;gap:6px}
+.recipe{list-style:none;padding:0;margin:0;display:grid;gap:6px}
 .recipe li{display:flex;gap:8px;align-items:center;font-size:14px}
-.recipe b{min-width:46px;font-variant-numeric:tabular-nums}
-.near{display:grid;gap:6px;margin:6px 0 12px}
-.near div{display:flex;gap:8px;align-items:center;font-size:13px}
+.recipe b{min-width:52px;font-variant-numeric:tabular-nums}
+.near{display:grid;gap:6px;margin-bottom:12px}
+.near div{display:flex;gap:8px;align-items:center;font-size:13px;line-height:1.25}
 .near .dot{width:22px;height:22px}
 .near span:last-child{margin-left:auto;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
-.lbl{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin-top:12px}
-.pins{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
-.pins button{width:34px;height:34px;border-radius:6px;border:0;box-shadow:inset 0 0 0 1px #0002;position:relative}
+.pins{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;min-height:34px;align-items:center}
+.pins button{width:34px;height:34px;border-radius:6px;border:0;box-shadow:inset 0 0 0 1px #0002}
 .pins button.sel{outline:2px solid var(--acc);outline-offset:2px}
-.row{display:flex;gap:8px}
-.muted{color:var(--mute);font-size:13px}
-/* harmony */
-.hctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
-.hctl select{font:15px Archivo,sans-serif;min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:0 10px}
-.hgrid{display:grid;gap:10px}
-.hrow{display:grid;grid-template-columns:64px 1fr 1fr;gap:10px;align-items:stretch;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
-.hrow .t{border-radius:8px;min-height:64px}
-.hopt{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg);text-align:left;font-weight:400}
-.hopt .dot{width:38px;height:38px;border-radius:6px}
-.hopt small{display:block;color:var(--mute);font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
 /* saved */
 .saved{display:grid;gap:10px}
 .sv{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
 .sv .strip{display:flex;height:34px;border-radius:6px;overflow:hidden;flex:0 0 140px}
 .sv .strip i{flex:1}
-.sv .meta{flex:1}
-.sv .meta small{color:var(--mute);display:block}
-/* picker */
-dialog{border:0;border-radius:16px;padding:0;width:min(760px,94vw);max-height:86vh;background:var(--bg);color:var(--ink);box-shadow:0 20px 60px #0008}
+.sv .meta{flex:1}.sv .meta small{color:var(--mute);display:block}
+/* dialogs */
+dialog{border:0;border-radius:16px;padding:0;width:min(760px,94vw);max-height:90vh;background:var(--bg);color:var(--ink);box-shadow:0 20px 60px #0008}
 dialog::backdrop{background:#0008}
 .dh{padding:16px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:10px}
 .dh .row{align-items:center;justify-content:space-between}
+.db{padding:4px 16px 14px;overflow:auto;max-height:62vh}
 .fchips{display:flex;flex-wrap:wrap;gap:6px}
-.fchips button{min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px}
+.fchips button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px}
 .fchips button[aria-pressed=true]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 22%,transparent)}
 .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:14px 16px;overflow:auto;max-height:58vh}
 .pitem{display:flex;gap:8px;align-items:center;text-align:left;padding:6px;border:1px solid var(--line);border-radius:10px;background:transparent;font-weight:400;font-size:13px;line-height:1.2}
 .pitem .dot{width:32px;height:32px;border-radius:6px}
 .pitem small{display:block;color:var(--mute);font-size:11px}
 .pitem[aria-pressed=true]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,transparent)}
-.df{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.df{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;align-items:center;gap:10px}
+.start{display:flex;gap:12px;align-items:center}
+.start .sw{width:56px;height:56px;border-radius:10px;box-shadow:inset 0 0 0 1px #0003;flex:none}
+.start input[type=color]{width:44px;height:40px;border:1px solid var(--line);border-radius:8px;background:transparent;padding:2px;cursor:pointer}
+.mini{display:grid;grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:4px}
+.mini button{aspect-ratio:1;border:0;border-radius:5px;box-shadow:inset 0 0 0 1px #0002;padding:0}
+.mini button[aria-pressed=true]{outline:3px solid var(--acc);outline-offset:1px}
+.preview{display:flex;flex-wrap:wrap;gap:8px}
+.preview .pchip{padding-right:12px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
-@media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}.card{position:static}}
-@media(max-width:560px){.hrow{grid-template-columns:48px 1fr}.hrow .hopt:last-child{grid-column:2}}
+@media(max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}}
 </style></head><body>
+<!-- shared brush filters: ragged edges plus streaks along each wedge -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+ <filter id="br0" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="3" result="n"/>
+  <feDisplacementMap in="SourceGraphic" in2="n" scale="14" xChannelSelector="R" yChannelSelector="G" result="d"/>
+  <feTurbulence type="fractalNoise" baseFrequency="0.16 0.012" numOctaves="2" seed="11" result="s"/>
+  <feDiffuseLighting in="s" surfaceScale="1.6" diffuseConstant="1" lighting-color="#fff" result="L"><feDistantLight azimuth="235" elevation="58"/></feDiffuseLighting>
+  <feComposite in="L" in2="d" operator="in" result="Lm"/>
+  <feBlend in="Lm" in2="d" mode="soft-light"/>
+ </filter>
+ <filter id="br1" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="21" result="n"/>
+  <feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G" result="d"/>
+  <feTurbulence type="fractalNoise" baseFrequency="0.14 0.014" numOctaves="2" seed="5" result="s"/>
+  <feDiffuseLighting in="s" surfaceScale="1.5" diffuseConstant="1" lighting-color="#fff" result="L"><feDistantLight azimuth="235" elevation="58"/></feDiffuseLighting>
+  <feComposite in="L" in2="d" operator="in" result="Lm"/>
+  <feBlend in="Lm" in2="d" mode="soft-light"/>
+ </filter>
+ <filter id="brv" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="8" result="n"/>
+  <feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G" result="d"/>
+  <feTurbulence type="fractalNoise" baseFrequency="0.012 0.15" numOctaves="2" seed="2" result="s"/>
+  <feDiffuseLighting in="s" surfaceScale="1.5" diffuseConstant="1" lighting-color="#fff" result="L"><feDistantLight azimuth="235" elevation="58"/></feDiffuseLighting>
+  <feComposite in="L" in2="d" operator="in" result="Lm"/>
+  <feBlend in="Lm" in2="d" mode="soft-light"/>
+ </filter>
+</defs></svg>
+
 <main class="band">
 <nav class="top" aria-label="Pages"><a href="./">Paint rack</a><a href="palette.html" aria-current="page">Palette maker</a></nav>
 <h1>Palette maker</h1>
-<p class="sub">Pick a few bottles from your rack and see every colour they mix to, laid out like a painted Zorn chart. Tap any mix for its recipe and the closest paint you already own, then pin the ones you like and save the palette.</p>
 
-<section class="base" aria-label="Paints in this palette" id="baseStrip"></section>
-<p class="hint" id="hint"></p>
-<div class="starters">Start from:
- <button data-preset="zorn">Zorn (ochre, red, black, white)</button>
- <button data-preset="primary">Primary triad + white</button>
- <button data-preset="earth">Earth tones</button>
+<div class="tools">
+ <div class="tabs" role="group" aria-label="View"><button data-v="wheel" aria-pressed="true">Mixing wheel</button><button data-v="saved" aria-pressed="false" id="savedTab">Saved</button></div>
+ <button class="btn pri" id="newBtn">+ New palette</button>
 </div>
-
-<div class="tabs" role="group" aria-label="View"><button data-v="wheel" aria-pressed="true">Mixing wheel</button><button data-v="harmony" aria-pressed="false">Harmony</button><button data-v="saved" aria-pressed="false" id="savedTab">Saved</button></div>
+<section class="base" aria-label="Paints in this palette" id="baseStrip"></section>
 
 <div class="wrap">
  <div id="view"></div>
  <aside>
   <div class="card" id="detail"></div>
-  <div class="card" id="saveCard">
-   <h2 style="font-size:20px">This palette</h2>
-   <div class="lbl">Pinned mixes</div>
+  <div class="card">
+   <div class="lbl" style="margin-top:0">Pinned mixes</div>
    <div class="pins" id="pins"></div>
-   <label class="lbl" for="pname" style="display:block;margin-bottom:4px">Name</label>
-   <input type="text" id="pname" placeholder="e.g. Escher neon, Zorn skin">
-   <div class="row" style="margin-top:10px"><button class="btn pri" id="saveBtn">Save palette</button><button class="btn" id="shareBtn">Copy link</button></div>
-   <p class="muted" style="margin:10px 0 0">Saved in this browser. Copy link carries the whole palette to another device.</p>
+   <input type="text" id="pname" placeholder="Palette name" aria-label="Palette name">
+   <div class="row" style="margin-top:10px"><button class="btn pri" id="saveBtn">Save</button><button class="btn" id="shareBtn">Copy link</button></div>
   </div>
  </aside>
 </div>
@@ -138,12 +150,28 @@ dialog::backdrop{background:#0008}
 
 <dialog id="picker" aria-label="Add paints">
  <div class="dh">
-  <div class="row"><h2 style="font-size:22px">Add paints from your rack</h2><button class="link" id="pClose">Done</button></div>
+  <div class="row"><h2 style="font-size:22px">Add paints</h2><button class="link" id="pClose">Done</button></div>
   <input type="search" id="pq" placeholder="Search name, brand or line">
   <div class="fchips" id="pf"></div>
  </div>
  <div class="plist" id="plist"></div>
- <div class="df"><span class="muted" id="pcount"></span><button class="btn pri" id="pDone">Done</button></div>
+</dialog>
+
+<dialog id="newDlg" aria-label="New palette">
+ <div class="dh"><div class="row"><h2 style="font-size:22px">New palette</h2><button class="link" id="nClose">Cancel</button></div></div>
+ <div class="db">
+  <div class="lbl">Scheme</div>
+  <div class="fchips" id="nScheme"></div>
+  <div id="nStartWrap">
+   <div class="lbl">Starting colour</div>
+   <div class="start"><span class="sw" id="nSw"></span><div><b id="nName"></b><div class="muted" id="nSub"></div></div><input type="color" id="nColor" aria-label="Any colour" title="Any colour"></div>
+   <div class="mini" id="nMini" style="margin-top:10px" aria-label="Or pick a bottle"></div>
+  </div>
+  <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="nWhite" checked> Add a white for tints</label>
+  <div class="lbl">Your bottles for this</div>
+  <div class="preview" id="nPrev"></div>
+ </div>
+ <div class="df"><button class="btn" id="nBlank">Start blank</button><button class="btn pri" id="nCreate">Create</button></div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -152,7 +180,6 @@ const PAINTS=[{"id":"Vallejo|Model Air|White","n":"White","b":"Vallejo","l":"Mod
 const byId=Object.fromEntries(PAINTS.map(p=>[p.id,p]));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
 const $=id=>document.getElementById(id);
-
 /* ---------- colour maths ---------- */
 const hex2rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
 const rgb2hex=a=>"#"+a.map(v=>Math.round(Math.min(1,Math.max(0,v))*255).toString(16).padStart(2,"0")).join("").toUpperCase();
@@ -187,173 +214,184 @@ function parts(ws){/* weights -> small whole-number parts */
  for(const m of [1,2,3,4,6,8,12]){const v=ws.map(w=>w*m);if(v.every(x=>Math.abs(x-Math.round(x))<1e-6)){const r=v.map(Math.round),g=r.reduce(gcd);return r.map(x=>x/g)}}
  return ws.map(w=>Math.round(w*10))}
 
+
 /* ---------- state ---------- */
-let S={name:"",base:[],pins:[]};      /* pins: recipes [[id,weight],...] */
-let sel=null, view="wheel", hRule="comp", hKey=null, pFilter="mix", lastWheel=null;
+let S={name:"",base:[],pins:[]};
+let sel=null,view="wheel",pFilter="mix";
 const store={get(){try{return JSON.parse(localStorage.getItem("paintPalettes")||"[]")}catch(e){return []}},
  set(v){try{localStorage.setItem("paintPalettes",JSON.stringify(v));return true}catch(e){return false}}};
 const recHex=r=>kmMix(r.filter(([id])=>byId[id]).map(([id,w])=>[byId[id].h,w]));
 const recKey=r=>r.map(([i,w])=>i+"*"+w).sort().join("+");
+const OPAQUE=PAINTS.filter(p=>p.t==="opaque");
+const isWhite=p=>{const [L,C]=lch(p.h);return L>88&&C<12};
+const hueOrder=p=>{const [L,C,H]=lch(p.h);return C<10?1000+(100-L):H};
+function nearest(h,n=3,pool=PAINTS){return pool.map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d).slice(0,n)}
+function family(h){const [L,C,H]=lch(h);if(C<8)return L>80?"White":L<25?"Black":"Grey";
+ return [[20,"Red"],[45,"Red / Orange"],[65,"Orange"],[85,"Yellow / Orange"],[105,"Yellow"],[135,"Yellow / Green"],[175,"Green"],[215,"Blue / Green"],[260,"Blue"],[300,"Blue / Violet"],[330,"Violet"],[350,"Red / Violet"],[361,"Red"]].find(([a])=>H<a)[1]}
+function nameFor(h){const L=lch(h)[0],f=family(h);return ["White","Black","Grey"].includes(f)?(f==="Grey"?"Neutral grey":"Near "+f.toLowerCase()):(L<35?"Dark ":L>75?"Light ":"")+f.toLowerCase().replace(/^./,c=>c.toUpperCase())}
 
-/* ---------- building the wheel ---------- */
-function isWhite(p){const [L,C]=lch(p.h);return L>88&&C<12}
+/* ---------- wheel model ---------- */
+const RAT=[.25,1/3,.5,1,1.5,2,3,4,6,8];
 function wheel(){
  const ps=S.base.map(id=>byId[id]).filter(Boolean);if(ps.length<2)return null;
- const whites=ps.filter(isWhite),cols=ps.filter(p=>!isWhite(p));
- const white=whites[0]||null;
- const src=cols.length>=2?cols:ps;
+ const white=ps.find(isWhite)||null,cols=ps.filter(p=>!isWhite(p)),src=cols.length>=2?cols:ps;
  const cand=[];const push=r=>{const h=recHex(r);if(cand.some(c=>de(c.h,h)<2.5))return;const [L,C,H]=lch(h);cand.push({r,h,L,C,H})};
  src.forEach(p=>push([[p.id,1]]));
  for(let i=0;i<src.length;i++)for(let j=i+1;j<src.length;j++)for(const [a,b] of [[3,1],[1,1],[1,3]])push([[src[i].id,a],[src[j].id,b]]);
- /* order round the wheel by hue; neutrals (low chroma) slot in by their faint hue too, as on a Zorn chart */
  cand.sort((x,y)=>x.H-y.H);
- let wedges=cand;if(cand.length>18){const step=cand.length/18;wedges=Array.from({length:18},(_,k)=>cand[Math.floor(k*step)])}
- /* start the wheel with the most yellow wedge at the top */
- let k=0,best=1e9;wedges.forEach((w,i)=>{const d=Math.min(Math.abs(w.H-88),360-Math.abs(w.H-88));if(w.C>15&&d<best){best=d;k=i}});
- wedges=wedges.slice(k).concat(wedges.slice(0,k));
- /* tints: pick the whole-number white ratio that lands closest to a target lightness,
-    so a strong dark still gets real tints and the recipe stays easy to measure */
- const RAT=[.25,1/3,.5,1,1.5,2,3,4,6,8];
- const tintTo=(r,frac,rat=RAT)=>{if(!white)return null;const tot=r.reduce((s,[,w])=>s+w,0),L0=lch(recHex(r))[0],Lw=lch(white.h)[0],goal=L0+(Lw-L0)*frac;
-  let best=null;for(const q of rat){const rr=r.concat([[white.id,tot*q]]),d=Math.abs(lch(recHex(rr))[0]-goal);if(!best||d<best.d)best={rr,d}}return best.rr};
- const rings=wedges.map(w=>[w.r,tintTo(w.r,.33),tintTo(w.r,.62)]);
+ let w=cand;if(cand.length>18){const st=cand.length/18;w=Array.from({length:18},(_,k)=>cand[Math.floor(k*st)])}
+ let k=0,best=1e9;w.forEach((x,i)=>{const d=Math.min(Math.abs(x.H-88),360-Math.abs(x.H-88));if(x.C>15&&d<best){best=d;k=i}});
+ w=w.slice(k).concat(w.slice(0,k));
+ const tintTo=(r,frac,rat=RAT)=>{if(!white)return null;const tot=r.reduce((s,[,x])=>s+x,0),L0=lch(recHex(r))[0],Lw=lch(white.h)[0],goal=L0+(Lw-L0)*frac;
+  let b=null;for(const q of rat){const rr=r.concat([[white.id,tot*q]]),d=Math.abs(lch(recHex(rr))[0]-goal);if(!b||d<b.d)b={rr,d}}return b.rr};
+ const rings=w.map(x=>[x.r,tintTo(x.r,.33),tintTo(x.r,.62)]);
  const all=src.map(p=>[p.id,1]);
  const values=white?[.8,.6,.4,.2,0].map(f=>f?tintTo(all,f,RAT.concat([12,16])):all):null;
- return {rings,white,values,src};
+ return {rings,white,values,all};
 }
-function arc(cx,cy,r0,r1,a0,a1){const p=(r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)];const lg=a1-a0>Math.PI?1:0;
- const [x1,y1]=p(r1,a0),[x2,y2]=p(r1,a1),[x3,y3]=p(r0,a1),[x4,y4]=p(r0,a0);
- return `M${x1} ${y1}A${r1} ${r1} 0 ${lg} 1 ${x2} ${y2}L${x3} ${y3}A${r0} ${r0} 0 ${lg} 0 ${x4} ${y4}Z`}
-function nameFor(h){const [L,C,H]=lch(h);if(C<8)return L>80?"Near white":L<25?"Near black":"Neutral grey";
- const n=[[20,"Red"],[45,"Red / orange"],[65,"Orange"],[85,"Yellow / orange"],[105,"Yellow"],[135,"Yellow / green"],[175,"Green"],[215,"Blue / green"],[260,"Blue"],[300,"Blue / violet"],[330,"Violet"],[350,"Red / violet"],[361,"Red"]].find(([a])=>H<a)[1];
- return (L<35?"Dark ":L>75?"Light ":"")+n.toLowerCase().replace(/^./,c=>c.toUpperCase())}
+const pt=(cx,cy,r,a)=>[cx+r*Math.sin(a),cy-r*Math.cos(a)];
+function slice(cx,cy,r,a0,a1){const [x1,y1]=pt(cx,cy,r,a0),[x2,y2]=pt(cx,cy,r,a1);return `M${cx} ${cy}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z`}
 
 /* ---------- rendering ---------- */
 function renderBase(){
- $("baseStrip").innerHTML=S.base.map(id=>{const p=byId[id];if(!p)return"";return `<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${esc(p.b)} · ${esc(p.s)}</small></span><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}).join("")+`<button class="add" id="addBtn">+ Add paint</button>`;
- const ps=S.base.map(id=>byId[id]).filter(Boolean);
- $("hint").textContent=ps.length<2?"Pick at least two paints. Three or four is the sweet spot; add a white to get the lighter inner rings and the value scale.":
-  (!ps.some(isWhite)?"No white picked, so you'll only see full-strength mixes. Add a white for tints.":`${ps.length} paints. Mixes are simulated with pigment maths, so treat them as a close guide and test on a palette.`);
+ $("baseStrip").innerHTML=S.base.map(id=>{const p=byId[id];if(!p)return"";return `<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${esc(p.s)}</small></span><button class="x" data-rm="${esc(id)}" aria-label="Remove ${esc(p.n)}">×</button></span>`}).join("")+`<button class="add" id="addBtn">+ Add paint</button>`;
 }
 function renderWheel(){
- const W=wheel();lastWheel=W;
- if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty">Add two or more paints above to build your mixing wheel.</div></div>`;return}
- const n=W.rings.length,cx=300,cy=300,R=[110,175,245,290],gap=0;
- const radii=W.white?[[R[0],R[1],2],[R[1],R[2],1],[R[2],R[3],0]]:[[R[0],R[3],0]];
- let svg=`<svg class="wheel" viewBox="0 0 600 600" role="group" aria-label="Mixing wheel">`;
- W.rings.forEach((ring,i)=>{const a0=i/n*2*Math.PI-Math.PI/n,a1=(i+1)/n*2*Math.PI-Math.PI/n;
-  radii.forEach(([r0,r1,k])=>{const r=ring[k];if(!r)return;const h=recHex(r),key=recKey(r);
-   svg+=`<path d="${arc(cx,cy,r0,r1,a0+gap,a1-gap)}" fill="${h}" data-r='${esc(JSON.stringify(r))}' class="${sel&&sel.key===key?"sel":""}" tabindex="0" aria-label="${esc(nameFor(h))} mix"><title>${esc(nameFor(h))}</title></path>`})});
- const centre=recHex(W.src.map(p=>[p.id,1]));const ck=recKey(W.src.map(p=>[p.id,1]));
- svg+=`<path d="M${cx-R[0]} ${cy}a${R[0]} ${R[0]} 0 1 0 ${2*R[0]} 0a${R[0]} ${R[0]} 0 1 0 ${-2*R[0]} 0" fill="${centre}" data-r='${esc(JSON.stringify(W.src.map(p=>[p.id,1])))}' class="${sel&&sel.key===ck?"sel":""}" tabindex="0" aria-label="All paints mixed"><title>All paints mixed equally</title></path></svg>`;
- let vals="";if(W.values){vals=`<p class="cap" style="margin-top:22px">Value scale: all colours mixed equally, stepped from light to full strength</p><div class="values">`+W.values.map((r,i)=>{const key=recKey(r);return `<div style="display:grid;gap:4px"><button style="background:${recHex(r)}" data-r='${esc(JSON.stringify(r))}' class="${sel&&sel.key===key?"sel":""}" aria-label="Value step ${i+1}"></button><span>${i+1}</span></div>`}).join("")+`</div>`}
- $("view").innerHTML=`<div class="sheet"><h3>${esc(S.name||"Your palette")}</h3><p class="cap">Outer ring: full strength${W.white?" · inner rings: stepped with "+esc(W.white.n):""} · centre: everything mixed</p>${svg}${vals}</div>`;
+ const W=wheel();
+ if(!W){$("view").innerHTML=`<div class="sheet"><div class="empty">Add at least two paints.</div></div>`;return}
+ const n=W.rings.length,cx=340,cy=330,R=[118,182,250],half=Math.PI/n,ov=.012;
+ let g="",labels="",mark="";
+ /* paint outer ring first as full slices, inner rings painted over them, like brushing a chart */
+ [[2,R[2],"br0"],[1,R[1],"br1"],[0,R[0],"br0"]].forEach(([k,r,f])=>{
+  W.rings.forEach((ring,i)=>{const rec=ring[2-k];if(!rec)return;
+   const rr=W.white?r:(k===2?R[2]:0);if(!rr)return;
+   const h=recHex(rec),deg=i/n*360;
+   g+=`<g transform="rotate(${deg.toFixed(2)} ${cx} ${cy})"><path d="${slice(cx,cy,rr,-half-ov,half+ov)}" fill="${h}" filter="url(#${f})" data-r='${esc(JSON.stringify(rec))}' tabindex="0" aria-label="${esc(nameFor(h))}"><title>${esc(nameFor(h))}</title></path></g>`;
+   if(sel&&sel.key===recKey(rec)){const rm=k===2?(R[1]+R[2])/2:k===1?(R[0]+R[1])/2:(52+R[0])/2,[mx,my]=pt(cx,cy,W.white?rm:(R[2]*.7),i/n*2*Math.PI);mark=`<circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#fff" stroke-width="3"/><circle cx="${mx}" cy="${my}" r="9" fill="none" stroke="#111" stroke-width="1.2"/>`}
+  })});
+ /* hub: everything mixed */
+ const hub=recHex(W.all);
+ g+=`<circle cx="${cx}" cy="${cy}" r="${W.white?52:70}" fill="${hub}" filter="url(#br1)" data-r='${esc(JSON.stringify(W.all))}' tabindex="0" aria-label="All paints mixed"><title>Everything mixed</title></circle>`;
+ if(sel&&sel.key===recKey(W.all))mark=`<circle cx="${cx}" cy="${cy}" r="9" fill="none" stroke="#fff" stroke-width="3"/>`;
+ /* hue names round the rim, only where the family changes */
+ let prev="";W.rings.forEach((ring,i)=>{const f=family(recHex(ring[0]));if(f===prev)return;prev=f;
+  const a=i/n*2*Math.PI,[x,y]=pt(cx,cy,R[2]+26,a),anc=Math.abs(Math.sin(a))<.25?"middle":Math.sin(a)>0?"start":"end";
+  labels+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${anc}">${esc(f)}</text>`});
+ let vals="";
+ if(W.values){const bw=92,gap=10,x0=(520-5*bw-4*gap)/2;
+  vals=`<svg class="vals" viewBox="0 0 520 120" role="group" aria-label="Value scale">`+W.values.map((r,i)=>{const x=x0+i*(bw+gap),h=recHex(r);
+   return `<rect x="${x}" y="6" width="${bw}" height="78" fill="${h}" filter="url(#brv)" data-r='${esc(JSON.stringify(r))}' tabindex="0" aria-label="Value ${i+1}"></rect>${sel&&sel.key===recKey(r)?`<circle cx="${x+bw/2}" cy="45" r="9" fill="none" stroke="#fff" stroke-width="3"/>`:""}<text x="${x+bw/2}" y="110" text-anchor="middle">${i+1}</text>`}).join("")+`</svg>`}
+ $("view").innerHTML=`<div class="sheet"><h3>${esc(S.name||"Untitled palette")}</h3><svg class="wheel" viewBox="0 0 680 660" role="group" aria-label="Mixing wheel">${g}${mark}${labels}</svg>${vals}</div>`;
 }
-function nearest(h,n=3,pool=PAINTS){return pool.map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d).slice(0,n)}
 function renderDetail(){
  const d=$("detail");
- if(!sel){d.innerHTML=`<h2>Tap a mix</h2><p class="muted" style="margin:6px 0 0">Every wedge on the wheel is a recipe made only from your chosen paints. Pick one to see the ratio and whether you already own something close.</p>`;return}
- if(sel.paint){const p=byId[sel.paint];const inBase=S.base.includes(p.id);
-  d.innerHTML=`<div class="big" style="background:${p.h}"></div><h2>${esc(p.n)}</h2><div class="muted">${esc(p.b)} · ${esc(p.l)}</div><p style="margin:10px 0">${esc(p.s)} · ${p.h}${p.e?" (estimated)":""}</p>${sel.target?`<p class="muted">${de(p.h,sel.target).toFixed(1)} ΔE from the ideal harmony colour.</p>`:""}<button class="btn" data-addbase="${esc(p.id)}" ${inBase?"disabled":""}>${inBase?"In this palette":"Add to palette"}</button>`;return}
- const r=sel.r,h=recHex(r),pp=parts(r.map(x=>x[1])),pinned=S.pins.some(x=>recKey(x)===sel.key);
- const near=nearest(h);
- d.innerHTML=`<div class="big" style="background:${h}"></div><h2>${esc(nameFor(h))}</h2><div class="muted">${h} · simulated mix</div>
+ if(!sel){d.innerHTML=`<p class="muted" style="margin:0">Tap a mix for its recipe.</p>`;return}
+ const r=sel.r,h=recHex(r),pp=parts(r.map(x=>x[1])),pinned=S.pins.some(x=>recKey(x)===sel.key),near=nearest(h);
+ d.innerHTML=`<div class="big" style="background:${h}"></div><h2>${esc(nameFor(h))}</h2><div class="muted">${h}</div>
   <div class="lbl">Recipe</div><ul class="recipe">${r.map(([id],i)=>{const p=byId[id];return `<li><b>${pp[i]} part${pp[i]>1?"s":""}</b><span class="dot" style="background:${p.h}"></span>${esc(p.n)}</li>`}).join("")}</ul>
-  <div class="lbl">Closest bottles you own</div><div class="near">${near.map(({p,d})=>`<div><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<br><small class="muted">${esc(p.s)}</small></span><span>${d<2?"≈ same":"ΔE "+d.toFixed(1)}</span></div>`).join("")}</div>
-  ${near[0].d<2?`<p class="muted" style="margin:-4px 0 10px">You could skip the mix and grab ${esc(near[0].p.n)}.</p>`:""}
-  <button class="btn ${pinned?"":"pri"}" id="pinBtn">${pinned?"Unpin":"Pin to palette"}</button>`;
+  <div class="lbl">Closest bottles</div><div class="near">${near.map(({p,d})=>`<div><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<br><small class="muted">${esc(p.s)}</small></span><span>${d<2?"≈ same":"ΔE "+d.toFixed(1)}</span></div>`).join("")}</div>
+  <button class="btn ${pinned?"":"pri"}" id="pinBtn">${pinned?"Unpin":"Pin"}</button>`;
 }
 function renderPins(){
- $("pins").innerHTML=S.pins.length?S.pins.map((r,i)=>`<button style="background:${recHex(r)}" data-pin="${i}" class="${sel&&sel.key===recKey(r)?"sel":""}" aria-label="Pinned mix ${i+1}" title="${esc(nameFor(recHex(r)))}"></button>`).join(""):`<span class="muted">Nothing pinned yet.</span>`;
- $("pname").value=S.name;
-}
-/* harmony */
-const RULES={comp:["Complementary",[0,180]],ana:["Analogous",[-30,0,30]],tri:["Triadic",[0,120,240]],split:["Split complementary",[0,150,210]],tet:["Tetradic",[0,90,180,270]]};
-function renderHarmony(){
- const keyOpts=S.base.map(id=>byId[id]).filter(p=>p&&lch(p.h)[1]>10);
- if(!hKey||!byId[hKey])hKey=keyOpts[0]?.id||null;
- let html=`<div class="hctl"><label class="muted" for="hk">Key colour</label><select id="hk">${(keyOpts.length?keyOpts:[]).map(p=>`<option value="${esc(p.id)}" ${p.id===hKey?"selected":""}>${esc(p.n)}</option>`).join("")}${keyOpts.length?"":`<option>Add a coloured paint first</option>`}</select>
-  <label class="muted" for="hr">Scheme</label><select id="hr">${Object.entries(RULES).map(([k,[l]])=>`<option value="${k}" ${k===hRule?"selected":""}>${l}</option>`).join("")}</select></div>`;
- if(!hKey){$("view").innerHTML=html+`<div class="sheet"><div class="empty">Add a coloured paint to your palette to use it as the key.</div></div>`;return}
- const [L,C,H]=lch(byId[hKey].h);
- const mixes=[];const W=lastWheel||wheel();if(W)W.rings.forEach(ring=>ring.forEach(r=>{if(r)mixes.push(r)}));
- html+=`<p class="muted" style="margin:0 0 10px">For each colour the scheme calls for: the best bottle you own, and the best mix from this palette.</p><div class="hgrid">`;
- RULES[hRule][1].forEach(off=>{const h2=(H+off+360)%360,t=lab2hex([L,C*Math.cos(h2*Math.PI/180),C*Math.sin(h2*Math.PI/180)]);
-  const own=off===0?{p:byId[hKey],d:0}:nearest(t,1,PAINTS.filter(p=>p.t!=="metallic"))[0];
-  const mx=mixes.map(r=>({r,h:recHex(r)})).map(o=>({...o,d:de(o.h,t)})).sort((a,b)=>a.d-b.d)[0];
-  html+=`<div class="hrow"><div class="t" style="background:${t}" title="Ideal ${t}"></div>
-   <button class="hopt" data-own="${esc(own.p.id)}" data-t="${t}"><span class="dot" style="background:${own.p.h}"></span><span>${esc(own.p.n)}<small>${off===0?"Key colour":"Bottle · ΔE "+own.d.toFixed(1)} · ${esc(own.p.s)}</small></span></button>
-   ${mx?`<button class="hopt" data-r='${esc(JSON.stringify(mx.r))}'><span class="dot" style="background:${mx.h}"></span><span>${esc(nameFor(mx.h))}<small>Palette mix · ΔE ${mx.d.toFixed(1)}</small></span></button>`:`<span class="muted" style="align-self:center">Add more paints to mix this</span>`}</div>`});
- $("view").innerHTML=html+`</div><p class="muted">Left square is the ideal colour for the scheme. A ΔE under about 5 is a close match; over 10 and you'll notice.</p>`;
- $("hk").onchange=e=>{hKey=e.target.value;renderHarmony()};$("hr").onchange=e=>{hRule=e.target.value;renderHarmony()};
+ $("pins").innerHTML=S.pins.length?S.pins.map((r,i)=>`<button style="background:${recHex(r)}" data-pin="${i}" class="${sel&&sel.key===recKey(r)?"sel":""}" aria-label="Pinned mix ${i+1}" title="${esc(nameFor(recHex(r)))}"></button>`).join(""):`<span class="muted">None yet</span>`;
+ if(document.activeElement!==$("pname"))$("pname").value=S.name;
 }
 function renderSaved(){
  const L=store.get();
  $("view").innerHTML=L.length?`<div class="saved">${L.map((s,i)=>{const cols=s.base.map(id=>byId[id]?.h).filter(Boolean).concat(s.pins.map(recHex));
-  return `<div class="sv"><div class="strip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</div><div class="meta"><b>${esc(s.name||"Untitled")}</b><small>${s.base.length} paints · ${s.pins.length} pinned · ${new Date(s.at).toLocaleDateString()}</small></div><button class="btn" data-load="${i}">Open</button><button class="link" data-del="${i}">Delete</button></div>`}).join("")}</div>`
-  :`<div class="sheet"><div class="empty">No saved palettes yet. Build one, pin a few mixes and hit Save palette.</div></div>`;
+  return `<div class="sv"><div class="strip">${cols.map(c=>`<i style="background:${c}"></i>`).join("")}</div><div class="meta"><b>${esc(s.name||"Untitled")}</b><small>${s.base.length} paints · ${s.pins.length} pinned</small></div><button class="btn" data-load="${i}">Open</button><button class="link" data-del="${i}">Delete</button></div>`}).join("")}</div>`
+  :`<div class="sheet"><div class="empty">Nothing saved yet.</div></div>`;
 }
 function render(){renderBase();renderPins();renderDetail();
  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===view));
  $("savedTab").textContent=`Saved (${store.get().length})`;
- if(view==="wheel")renderWheel();else if(view==="harmony"){lastWheel=wheel();renderHarmony()}else renderSaved()}
+ view==="wheel"?renderWheel():renderSaved()}
 
-/* ---------- picker ---------- */
-const PF=[["mix","Mixable (opaque)"],["all","Everything"],["contrast","Contrast / speed"],["wash","Washes"]];
-const hueOrder=p=>{const [L,C,H]=lch(p.h);return C<10?1000+(100-L):H};
+/* ---------- add-paint picker ---------- */
+const PF=[["mix","Opaque"],["all","Everything"],["contrast","Contrast"],["wash","Washes"]];
 function renderPicker(){
  const q=$("pq").value.trim().toLowerCase();
- const list=PAINTS.filter(p=>(pFilter==="all"?true:pFilter==="mix"?p.t==="opaque":p.t===pFilter)&&(!q||(p.n+" "+p.b+" "+p.l).toLowerCase().includes(q))).sort((a,b)=>hueOrder(a)-hueOrder(b));
+ const list=PAINTS.filter(p=>(pFilter==="all"||(pFilter==="mix"?p.t==="opaque":p.t===pFilter))&&(!q||(p.n+" "+p.b+" "+p.l).toLowerCase().includes(q))).sort((a,b)=>hueOrder(a)-hueOrder(b));
  $("pf").innerHTML=PF.map(([k,l])=>`<button data-f="${k}" aria-pressed="${k===pFilter}">${l}</button>`).join("");
  $("plist").innerHTML=list.map(p=>`<button class="pitem" data-pick="${esc(p.id)}" aria-pressed="${S.base.includes(p.id)}"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${esc(p.b)} · ${esc(p.s)}</small></span></button>`).join("")||`<p class="muted">No paints match.</p>`;
- $("pcount").textContent=`${S.base.length} in palette`;
 }
 
-/* ---------- presets ---------- */
-const PRESETS={zorn:["#C4952F","#C8232C","#252A33","#F7F6F1"],primary:["#F4C500","#C8232C","#1F4E9A","#F7F6F1"],earth:["#B5892F","#9B3B24","#5A3C28","#272E3A","#F2EBD9"]};
-function preset(k){const used=new Set();S.base=PRESETS[k].map(h=>{const m=PAINTS.filter(p=>p.t==="opaque"&&!used.has(p.id)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0].p;used.add(m.id);return m.id});
- S.pins=[];sel=null;S.name=k==="zorn"?"Zorn palette":k==="primary"?"Primary triad":"Earth tones";view="wheel";render();
- toast("Matched to the nearest bottles you own")}
+/* ---------- new palette: start colour + scheme -> your bottles ---------- */
+const SCHEMES=[["comp","Complementary",[0,180]],["ana","Analogous",[-30,0,30]],["tri","Triadic",[0,120,240]],["split","Split complementary",[0,150,210]],["tet","Tetradic",[0,90,180,270]],["mono","Monochrome",null],["zorn","Zorn",null]];
+const ZORN=["#C4952F","#C8232C","#252A33"];
+let N={scheme:"comp",hex:"#C8232C",paint:null,white:true};
+function rot(h,off,dl=0,cf=1){const [L,C,H]=lch(h),a=(H+off)*Math.PI/180;return lab2hex([Math.max(5,Math.min(95,L+dl)),C*cf*Math.cos(a),C*cf*Math.sin(a)])}
+function planNew(){
+ const used=new Set(),pick=h=>{const m=OPAQUE.filter(p=>!used.has(p.id)&&!isWhite(p)).map(p=>({p,d:de(h,p.h)})).sort((a,b)=>a.d-b.d)[0];used.add(m.p.id);return m};
+ let out=[];
+ if(N.scheme==="zorn")out=ZORN.map(pick);
+ else{
+  const key=N.paint?{p:byId[N.paint],d:0}:pick(N.hex);used.add(key.p.id);out.push(key);
+  const base=key.p.h;
+  if(N.scheme==="mono")[[0,-28,.85],[0,-14,1],[0,16,.8]].forEach(([o,dl,cf])=>out.push(pick(rot(base,o,dl,cf))));
+  else SCHEMES.find(s=>s[0]===N.scheme)[2].filter(o=>o!==0).forEach(o=>out.push(pick(rot(base,o))));
+ }
+ if(N.white||N.scheme==="zorn"){const w=OPAQUE.filter(isWhite).map(p=>({p,d:de("#F7F6F1",p.h)})).sort((a,b)=>a.d-b.d)[0];if(w)out.push({p:w.p,d:0,white:true})}
+ return out;
+}
+function renderNew(){
+ $("nScheme").innerHTML=SCHEMES.map(([k,l])=>`<button data-sch="${k}" aria-pressed="${k===N.scheme}">${l}</button>`).join("");
+ $("nStartWrap").style.display=N.scheme==="zorn"?"none":"";
+ const p=N.paint&&byId[N.paint];
+ $("nSw").style.background=p?p.h:N.hex;$("nName").textContent=p?p.n:"Custom colour";$("nSub").textContent=p?p.s:N.hex+" · matched to your nearest bottle";
+ $("nColor").value=(p?p.h:N.hex).toLowerCase();
+ if(!$("nMini").childElementCount)$("nMini").innerHTML=OPAQUE.filter(x=>lch(x.h)[1]>10).sort((a,b)=>hueOrder(a)-hueOrder(b)).map(x=>`<button data-start="${esc(x.id)}" style="background:${x.h}" title="${esc(x.n)}" aria-label="${esc(x.n)}"></button>`).join("");
+ $("nMini").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.start===N.paint));
+ $("nPrev").innerHTML=planNew().map(({p,d,white})=>`<span class="pchip"><span class="dot" style="background:${p.h}"></span><span>${esc(p.n)}<small>${white?"for tints":d<1?"start colour":"ΔE "+d.toFixed(1)+" from ideal"}</small></span></span>`).join("");
+}
+function createNew(){const plan=planNew();S={base:plan.map(x=>x.p.id),pins:[],
+ name:N.scheme==="zorn"?"Zorn":`${SCHEMES.find(s=>s[0]===N.scheme)[1]} · ${(N.paint?byId[N.paint].n:plan[0].p.n)}`};
+ sel=null;view="wheel";$("newDlg").close();persistDraft();render()}
 
 /* ---------- share / save ---------- */
 function encode(){return btoa(unescape(encodeURIComponent(JSON.stringify({n:S.name,b:S.base,p:S.pins}))))}
 function decode(s){try{const o=JSON.parse(decodeURIComponent(escape(atob(s))));return {name:o.n||"",base:(o.b||[]).filter(id=>byId[id]),pins:(o.p||[]).filter(r=>r.every(([id])=>byId[id]))}}catch(e){return null}}
-function toast(t){const el=$("toast");el.textContent=t;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),2200)}
+function toast(t){const el=$("toast");el.textContent=t;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),2000)}
 function persistDraft(){try{localStorage.setItem("paletteDraft",encode())}catch(e){}}
 
 /* ---------- events ---------- */
+function choose(t){const r=JSON.parse(t.dataset.r);sel={r,key:recKey(r)};renderWheel();renderDetail();renderPins()}
 document.addEventListener("click",e=>{
- const t=e.target.closest("button,path");if(!t)return;
- if(t.id==="addBtn"){renderPicker();$("picker").showModal();$("pq").focus();return}
+ const t=e.target.closest("button,[data-r]");if(!t)return;
+ if(t.dataset.r){choose(t);return}
+ if(t.id==="addBtn"){renderPicker();$("picker").showModal();return}
+ if(t.id==="newBtn"){renderNew();$("newDlg").showModal();return}
+ if(t.dataset.sch){N.scheme=t.dataset.sch;renderNew();return}
+ if(t.dataset.start){N.paint=t.dataset.start;renderNew();return}
  if(t.dataset.rm){S.base=S.base.filter(id=>id!==t.dataset.rm);S.pins=S.pins.filter(r=>r.every(([id])=>S.base.includes(id)));sel=null;persistDraft();render();return}
- if(t.dataset.preset){preset(t.dataset.preset);persistDraft();return}
  if(t.dataset.v){view=t.dataset.v;render();return}
  if(t.dataset.f){pFilter=t.dataset.f;renderPicker();return}
- if(t.dataset.pick){const id=t.dataset.pick;S.base=S.base.includes(id)?S.base.filter(x=>x!==id):S.base.concat(id);t.setAttribute("aria-pressed",S.base.includes(id));$("pcount").textContent=`${S.base.length} in palette`;persistDraft();return}
- if(t.dataset.r){const r=JSON.parse(t.dataset.r);sel={r,key:recKey(r)};renderDetail();renderPins();document.querySelectorAll(".sel").forEach(x=>x.classList.remove("sel"));t.classList.add("sel");return}
- if(t.dataset.own){sel={paint:t.dataset.own,target:t.dataset.t};renderDetail();return}
- if(t.dataset.addbase){if(!S.base.includes(t.dataset.addbase))S.base.push(t.dataset.addbase);persistDraft();render();toast("Added to palette");return}
- if(t.dataset.pin!==undefined){const r=S.pins[+t.dataset.pin];sel={r,key:recKey(r)};renderDetail();renderPins();return}
+ if(t.dataset.pick){const id=t.dataset.pick;S.base=S.base.includes(id)?S.base.filter(x=>x!==id):S.base.concat(id);t.setAttribute("aria-pressed",S.base.includes(id));persistDraft();return}
+ if(t.dataset.pin!==undefined){const r=S.pins[+t.dataset.pin];sel={r,key:recKey(r)};render();return}
  if(t.id==="pinBtn"){const i=S.pins.findIndex(x=>recKey(x)===sel.key);if(i>=0)S.pins.splice(i,1);else S.pins.push(sel.r);persistDraft();renderPins();renderDetail();return}
  if(t.dataset.load!==undefined){const s=store.get()[+t.dataset.load];S={name:s.name,base:s.base.filter(id=>byId[id]),pins:s.pins.filter(r=>r.every(([id])=>byId[id]))};sel=null;view="wheel";persistDraft();render();return}
- if(t.dataset.del!==undefined){const L=store.get(),s=L[+t.dataset.del];if(!confirmDel(s))return;L.splice(+t.dataset.del,1);store.set(L);render();return}
+ if(t.dataset.del!==undefined){const L=store.get(),s=L[+t.dataset.del];if(!confirm(`Delete "${s.name||"Untitled"}"?`))return;L.splice(+t.dataset.del,1);store.set(L);render();return}
 });
-function confirmDel(s){return window.confirm?confirm(`Delete "${s.name||"Untitled"}"?`):true}
-$("pClose").onclick=$("pDone").onclick=()=>{$("picker").close();sel=null;render()};
-$("picker").addEventListener("close",()=>render());
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&e.target.dataset.r){e.preventDefault();choose(e.target)}});
+$("pClose").onclick=()=>$("picker").close();
+$("picker").addEventListener("close",()=>{sel=null;render()});
 $("pq").oninput=renderPicker;
-$("pname").oninput=e=>{S.name=e.target.value;persistDraft();if(view==="wheel"){const h=document.querySelector(".sheet h3");if(h)h.textContent=S.name||"Your palette"}};
-$("saveBtn").onclick=()=>{if(S.base.length<1){toast("Add some paints first");return}
- const L=store.get();const name=S.name.trim()||"Untitled palette";const i=L.findIndex(x=>x.name===name);
- const rec={name,base:S.base,pins:S.pins,at:Date.now()};if(i>=0)L[i]=rec;else L.unshift(rec);
- toast(store.set(L)?(i>=0?"Palette updated":"Palette saved"):"Couldn't save in this browser; use Copy link");S.name=name;render()};
+$("nClose").onclick=()=>$("newDlg").close();
+$("nColor").oninput=e=>{N.hex=e.target.value.toUpperCase();N.paint=null;renderNew()};
+$("nWhite").onchange=e=>{N.white=e.target.checked;renderNew()};
+$("nCreate").onclick=createNew;
+$("nBlank").onclick=()=>{S={name:"",base:[],pins:[]};sel=null;view="wheel";$("newDlg").close();persistDraft();render()};
+$("pname").oninput=e=>{S.name=e.target.value;persistDraft();const h=document.querySelector(".sheet h3");if(h)h.textContent=S.name||"Untitled palette"};
+$("saveBtn").onclick=()=>{if(!S.base.length){toast("Add some paints first");return}
+ const L=store.get(),name=S.name.trim()||"Untitled palette",i=L.findIndex(x=>x.name===name),rec={name,base:S.base,pins:S.pins,at:Date.now()};
+ if(i>=0)L[i]=rec;else L.unshift(rec);toast(store.set(L)?(i>=0?"Updated":"Saved"):"Couldn't save here; use Copy link");S.name=name;render()};
 $("shareBtn").onclick=async()=>{const url=location.href.split("#")[0]+"#p="+encode();
  try{await navigator.clipboard.writeText(url);toast("Link copied")}catch(e){prompt("Copy this link",url)}};
-document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.tagName==="path"){e.preventDefault();e.target.dispatchEvent(new MouseEvent("click",{bubbles:true}))}});
 
 /* ---------- boot ---------- */
 (function(){const m=location.hash.match(/#p=(.+)/);let s=m&&decode(m[1]);
  if(!s){try{const d=localStorage.getItem("paletteDraft");s=d&&decode(d)}catch(e){}}
- if(s&&s.base.length){S=s;render()}else preset("zorn")})();
+ if(s&&s.base.length)S=s;else{N.scheme="zorn";const plan=planNew();S={name:"Zorn",base:plan.map(x=>x.p.id),pins:[]};N.scheme="comp"}
+ render()})();
 </script>
 </body></html>
